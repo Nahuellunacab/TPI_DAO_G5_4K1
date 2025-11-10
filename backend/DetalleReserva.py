@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
 from backend.models import Cancha, CanchaxServicio, Deporte, Horario, Servicio, SessionLocal, DetalleReserva
-from basicas import _to_dict
+from .basicas import _to_dict
 
 bp = Blueprint('detalle_reserva', __name__)
 

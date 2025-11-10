@@ -8,16 +8,16 @@ if str(ROOT) not in sys.path:
 
 # Import blueprints from this folder
 try:
-    from Clientes import bp as clientes_bp
-    from Canchas import bp as canchas_bp
-    from DetalleReserva import bp as detalle_reserva_bp
-    from Reserva import bp as reserva_bp
-    from Torneo import bp as torneo_bp
-    from Equipo import bp as equipo_bp
-    from EquipoxCliente import bp as equipoxcliente_bp
-    from Partido import bp as partido_bp
-    from Pago import bp as pago_bp
-    from Usuario import bp as usuario_bp
+    from .Clientes import bp as clientes_bp
+    from .Canchas import bp as canchas_bp
+    from .DetalleReserva import bp as detalle_reserva_bp
+    from .Reserva import bp as reserva_bp
+    from .Torneo import bp as torneo_bp
+    from .Equipo import bp as equipo_bp
+    from .EquipoxCliente import bp as equipoxcliente_bp
+    from .Partido import bp as partido_bp
+    from .Pago import bp as pago_bp
+    from .Usuario import bp as usuario_bp
 except Exception as e:
     # If imports fail, raise a clearer error so the developer can fix import paths
     raise ImportError(f"Fallo al importar blueprints: {e}")
@@ -38,7 +38,7 @@ def create_app():
     app.register_blueprint(pago_bp, url_prefix='/api')
     app.register_blueprint(usuario_bp, url_prefix='/api')
 
-    @app.route('/health')
+    @app.route('/api/health')
     def health():
         return jsonify({'status': 'ok'})
 
