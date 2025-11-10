@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
 from backend.models import SessionLocal, Cliente, TipoDocumento, engine
-from basicas import _to_dict
+from .basicas import _to_dict
 
 bp = Blueprint('clientes', __name__)
 
