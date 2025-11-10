@@ -10,8 +10,15 @@ def create_usuario():
     data = request.get_json() or {}
     session = SessionLocal()
     try:
-        allowed = {c.name for c in Usuario.__table__.columns if not c.primary_key}
+        # Build allowed keys from the ORM mapper attribute names (exclude PKs)
+        mapper = Usuario.__mapper__
+        pk_attr_keys = {mapper.get_property_by_column(col).key for col in mapper.primary_key}
+        allowed = {attr.key for attr in mapper.column_attrs if attr.key not in pk_attr_keys}
         obj_kwargs = {k: v for k, v in data.items() if k in allowed}
+        # Ensure permisos defaults to 1 for new users created from the modal/frontend.
+        # If frontend doesn't send permisos or sends null/empty, set to 1.
+        if 'permisos' not in obj_kwargs or obj_kwargs.get('permisos') in (None, ''):
+            obj_kwargs['permisos'] = 1
         obj = Usuario(**obj_kwargs)
         session.add(obj)
         session.commit()
@@ -76,7 +83,10 @@ def update_usuario(id):
         obj = session.get(Usuario, id)
         if not obj:
             return jsonify({'error': 'Not found'}), 404
-        allowed = {c.name for c in Usuario.__table__.columns if not c.primary_key}
+        # Use ORM mapper attribute names for updates (exclude PKs)
+        mapper = Usuario.__mapper__
+        pk_attr_keys = {mapper.get_property_by_column(col).key for col in mapper.primary_key}
+        allowed = {attr.key for attr in mapper.column_attrs if attr.key not in pk_attr_keys}
         for k, v in data.items():
             if k in allowed:
                 setattr(obj, k, v)

@@ -43,7 +43,8 @@ Base = declarative_base()
 
 
 class TipoDocumento(Base):
-    __tablename__ = "TipoDocumento"
+    # The actual DB table name is 'TipoDoc' in the existing SQLite file.
+    __tablename__ = "TipoDoc"
     idTipoDoc = Column(Integer, primary_key=True, autoincrement=True)
     nombre = Column(String, nullable=False, unique=True)
     
@@ -57,52 +58,60 @@ class EstadoCancha(Base):
     __tablename__ = "EstadoCancha"
     idEstado = Column(Integer, primary_key=True, autoincrement=True)
     nombre = Column(String(50), nullable=False, unique=True)
-
     def __repr__(self):
         return f"<EstadoCancha(idEstado={self.idEstado}, nombre='{self.nombre}')>"
+    # relación hacia Cancha (un estado puede aplicarse a varias canchas)
+    cancha = relationship("Cancha", back_populates="estados")
 
 
 class EstadoReserva(Base):
     __tablename__ = "EstadoReserva"
     idEstado = Column(Integer, primary_key=True, autoincrement=True)
     nombre = Column(String(50), nullable=False, unique=True)
-
     def __repr__(self):
         return f"<EstadoReserva(idEstado={self.idEstado}, nombre='{self.nombre}')>"
+    reserva = relationship("Reserva", back_populates="estados")
 
 
 class EstadoTorneo(Base):
     __tablename__ = "EstadoTorneo"
     idEstado = Column(Integer, primary_key=True, autoincrement=True)
     nombre = Column(String(50), nullable=False, unique=True)
-
     def __repr__(self):
         return f"<EstadoTorneo(idEstado={self.idEstado}, nombre='{self.nombre}')>"
+    torneo = relationship("Torneo", back_populates="estados")
 
 
 class EstadoPago(Base):
     __tablename__ = "EstadoPago"
     idEstado = Column(Integer, primary_key=True, autoincrement=True)
     nombre = Column(String(50), nullable=False, unique=True)
-
     def __repr__(self):
         return f"<EstadoPago(idEstado={self.idEstado}, nombre='{self.nombre}')>"
+    pago = relationship("Pago", back_populates="estados")
 
 
 class Cliente(Base):
     __tablename__ = "Cliente"
     idCliente = Column(Integer, primary_key=True, autoincrement=True)
-    idTipoDoc = Column(Integer, ForeignKey("TipoDocumento.idTipoDoc"), nullable=False)
+    # The DB uses the column name 'tipoDoc' and the table 'TipoDoc' (legacy schema).
+    # Map the Python attribute `idTipoDoc` to the actual DB column name so the
+    # ORM works against the existing DB without altering schema.
+    idTipoDoc = Column('tipoDoc', Integer, ForeignKey("TipoDoc.idTipoDoc"), nullable=False)
     numeroDoc = Column(Integer, nullable=False)
     nombre = Column(String(50))
     apellido = Column(String(50))
     mail = Column(String(50), unique=True)
     telefono = Column(String(20))
     fechaRegistro = Column(DateTime)
+    idUsuario = Column(Integer, ForeignKey("Usuario.idUsuario"))
 
     tipo_documento = relationship("TipoDocumento", back_populates="clientes")
+    usuario = relationship("Usuario", back_populates="clientes")
 
-    __table_args__ = (UniqueConstraint('idTipoDoc', 'numeroDoc', name='uq_cliente_tipoydoc'),)
+    # Unique constraint exists in the DB over the physical columns; use the
+    # actual column name 'tipoDoc' here so SQLAlchemy generates the correct SQL.
+    __table_args__ = (UniqueConstraint('tipoDoc', 'numeroDoc', name='uq_cliente_tipoydoc'),)
 
     def __repr__(self):
         return f"<Cliente({self.idTipoDoc}-{self.numeroDoc}, {self.nombre} {self.apellido}, mail='{self.mail}', telefono='{self.telefono}', fechaRegistro={self.fechaRegistro})>"
@@ -202,6 +211,8 @@ class Reserva(Base):
     detalles = relationship("DetalleReserva", back_populates="reserva", cascade="all, delete-orphan")
     cliente = relationship("Cliente", back_populates="reservas")
     estados = relationship("EstadoReserva", back_populates="reserva")
+    # Relación con Pago: una reserva puede tener un pago (one-to-one)
+    pago = relationship("Pago", back_populates="reserva", uselist=False, cascade="all, delete-orphan")
 
 
 class MetodoPago(Base):
@@ -254,6 +265,21 @@ class Torneo(Base):
     estados = relationship("EstadoTorneo", back_populates="torneo")
 
 
+class TorneoxCancha(Base):
+    __tablename__ = "TorneoxCancha"
+    idTorneoCancha = Column(Integer, primary_key=True, autoincrement=True)
+    idTorneo = Column(Integer, ForeignKey("Torneo.idTorneo"), nullable=False)
+    idCancha = Column(Integer, ForeignKey("Cancha.idCancha"), nullable=False)
+    idHorario = Column(Integer, ForeignKey("Horario.idHorario"), nullable=True)
+
+    torneo = relationship("Torneo", back_populates="cancha")
+    cancha = relationship("Cancha", back_populates="torneos")
+    horario = relationship("Horario", back_populates="torneos")
+
+    def __repr__(self):
+        return f"<TorneoxCancha(idTorneoCancha={self.idTorneoCancha}, idTorneo={self.idTorneo}, idCancha={self.idCancha}, idHorario={self.idHorario})>"
+
+
 class Partido(Base):
     __tablename__ = "Partido"
     idPartido = Column(Integer, primary_key=True, autoincrement=True)
@@ -288,18 +314,25 @@ class Permiso(Base):
 
     def __repr__(self):
         return f"<Permiso(idPermiso={self.idPermiso}, nombre='{self.nombre}')>"
+    # relación inversa con Usuario (un permiso -> varios usuarios)
+    usuarios = relationship("Usuario", back_populates="permiso_rel")
 
 
 class Usuario(Base):
     __tablename__ = "Usuario"
     idUsuario = Column(Integer, primary_key=True, autoincrement=True)
-    usuario = Column(String(100), nullable=False, unique=True)
-    contrasena = Column(String(200), nullable=False)  # almacenar hash en producción
-    permiso = Column(Integer, ForeignKey("Permiso.idPermiso"))
+    usuario = Column('usuario', String(100), nullable=False, unique=True)
+    contrasena = Column('contraseña', String(200), nullable=False)  # almacenar hash en producción
+    permisos = Column('permisos', Integer, ForeignKey("Permiso.idPermiso"))
 
     def __repr__(self):
-        return f"<Usuario(idUsuario={self.idUsuario}, usuario='{self.usuario}', permisos='{self.permisos}')>"
-    permisos = relationship("Permiso", secondary="usuario_permiso", back_populates="usuarios")
+        # Use the Python attribute names in the repr; `permisos` is the attr
+        # storing the FK value in this model.
+        return f"<Usuario(idUsuario={self.idUsuario}, usuario='{self.usuario}', permisos={self.permisos})>"
+    # relación hacia Permiso (muchos usuarios -> un permiso)
+    permiso_rel = relationship("Permiso", back_populates="usuarios")
+    # relación inversa: un usuario puede tener varios clientes
+    clientes = relationship("Cliente", back_populates="usuario")
 
 
 

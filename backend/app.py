@@ -42,6 +42,23 @@ def create_app():
     def health():
         return jsonify({'status': 'ok'})
 
+    # --- seed mínimo para TipoDocumento si está vacío ---
+    try:
+        from database.mapeoCanchas import SessionLocal, TipoDocumento
+        session = SessionLocal()
+        try:
+            cnt = session.query(TipoDocumento).count()
+            if cnt == 0:
+                defaults = ['DNI', 'LC', 'LE', 'PASAPORTE']
+                for n in defaults:
+                    session.add(TipoDocumento(nombre=n))
+                session.commit()
+        finally:
+            session.close()
+    except Exception:
+        # No bloquear el arranque si algo falla aquí; solo intentamos un seed seguro.
+        pass
+
     return app
 
 

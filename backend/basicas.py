@@ -38,7 +38,25 @@ def _to_dict(obj) -> Dict[str, Any]:
 	"""
 	if obj is None:
 		return {}
-	return {col.name: getattr(obj, col.name) for col in obj.__table__.columns}
+	"""Serialize a SQLAlchemy mapped object to a dict using mapper attribute keys.
+
+	Using the mapper's column_attrs ensures we use the Python attribute names
+	(column.key) exposed by the ORM instead of the physical DB column names
+	(which may contain non-ASCII characters). This makes JSON stable and
+	avoids AttributeError when the DB column name doesn't match the Python
+	attribute.
+	"""
+	mapper = getattr(obj, "__mapper__", None)
+	if mapper is None:
+		# Fallback: try table columns (best-effort)
+		return {col.key: getattr(obj, col.key) for col in obj.__table__.columns}
+
+	result = {}
+	for attr in mapper.column_attrs:
+		key = attr.key
+		# Some mapped attributes may not be present on the instance (deferred); use getattr safely
+		result[key] = getattr(obj, key)
+	return result
 
 
 #---------------- Tipo Documento ----------------
@@ -62,11 +80,11 @@ def list_tipos_documento() -> List[Dict[str, Any]]:
 # ---------------- Clientes ----------------
 
 def create_cliente(idTipoDoc: int, numeroDoc: int, nombre: str = None,
-				   apellido: str = None, mail: str = None, telefono: str = None, fechaRegistro = None) -> Dict[str, Any]:
+				   apellido: str = None, mail: str = None, telefono: str = None, fechaRegistro = None, idUsuario: int = None) -> Dict[str, Any]:
 	session = SessionLocal()
 	try:
 		cliente = Cliente(idTipoDoc=idTipoDoc, numeroDoc=numeroDoc, nombre=nombre,
-						  apellido=apellido, mail=mail, telefono=telefono, fechaRegistro=fechaRegistro)
+						  apellido=apellido, mail=mail, telefono=telefono, fechaRegistro=fechaRegistro, idUsuario=idUsuario)
 		session.add(cliente)
 		session.commit()  # aquí se guarda en la DB
 		session.refresh(cliente)  # actualiza el objeto con la PK autogenerada
@@ -118,7 +136,6 @@ def update_cliente(
 	apellido: str = None,
 	mail: str = None,
 	telefono: str = None,
-	fechaRegistro = None,
 ) -> Dict[str, Any]:
 	session = SessionLocal()
 	try:
@@ -139,9 +156,6 @@ def update_cliente(
 			cliente.mail = mail
 		if telefono is not None:
 			cliente.telefono = telefono
-		if fechaRegistro is not None:
-			cliente.fechaRegistro = fechaRegistro
-
 		session.commit()
 		session.refresh(cliente)
 		return _to_dict(cliente)
