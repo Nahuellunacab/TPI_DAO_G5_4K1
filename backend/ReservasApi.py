@@ -166,9 +166,7 @@ def crear_reserva_slot():
             if int(s_id) not in valid_cxs:
                 return jsonify({'error': f'idCxS {s_id} no pertenece a la cancha seleccionada'}), 400
 
-        # Verify that the cliente exists
-        cliente_obj = session.get(Reserva.__table__.columns['idCliente'].type.__class__, None)
-        # Instead of the above hack, use session.get on the Cliente model if available
+        # Verify that the cliente exists. Use the Cliente model if available.
         try:
             from database.mapeoCanchas import Cliente as ClienteModel
             cliente_check = session.get(ClienteModel, idCliente)
