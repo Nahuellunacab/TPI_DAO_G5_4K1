@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from database.mapeoCanchas import SessionLocal, Usuario, Permiso
+from backend.models import SessionLocal, Usuario, Permiso
 from basicas import _to_dict
 
 bp = Blueprint('usuario', __name__)

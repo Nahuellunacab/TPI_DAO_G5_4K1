@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from database.mapeoCanchas import SessionLocal, Cliente, TipoDocumento, engine, DATABASE_URL
+from backend.models import SessionLocal, Cliente, TipoDocumento, engine
 from basicas import _to_dict
 
 bp = Blueprint('clientes', __name__)
@@ -135,7 +135,7 @@ def tipos_documento_info():
     """
     session = SessionLocal()
     from sqlalchemy import text
-    info = {"database_url": DATABASE_URL, "checked": []}
+    info = {"database_url": "N/A in new structure", "checked": []}
     for tbl in ("TipoDocumento", "TipoDoc"):
         try:
             cnt_row = session.execute(text(f"SELECT count(*) FROM {tbl}")).scalar()

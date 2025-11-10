@@ -4,7 +4,7 @@
 from typing import List, Dict, Any
 from sqlalchemy import func, desc
 
-from database.mapeoCanchas import (
+from backend.models import (
 	SessionLocal,
 	Cliente,
 	Cancha,

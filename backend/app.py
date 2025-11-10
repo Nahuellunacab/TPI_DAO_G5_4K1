@@ -44,7 +44,7 @@ def create_app():
 
     # --- seed mínimo para TipoDocumento si está vacío ---
     try:
-        from database.mapeoCanchas import SessionLocal, TipoDocumento
+        from backend.models import SessionLocal, TipoDocumento
         session = SessionLocal()
         try:
             cnt = session.query(TipoDocumento).count()

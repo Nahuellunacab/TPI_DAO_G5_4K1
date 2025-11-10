@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from database.mapeoCanchas import SessionLocal, Partido
+from backend.models import SessionLocal, Partido
 from basicas import _to_dict
 
 bp = Blueprint('partido', __name__)
