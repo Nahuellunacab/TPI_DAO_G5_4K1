@@ -1,26 +1,68 @@
-# TPI_DAO_G5_4K1
-Trabajo Práctico Integrador de materia Desarrollo de Aplicaciones con Objetos
+# TPI DAO - Grupo 5 - 4K1
 
-## Stack 
-Web? -> Flask + SQLite/MySQL + Flet o React
+Trabajo Práctico Integrador para la materia "Desarrollo de Aplicaciones con Objetos".
 
-## Opcion de Stack  (gpt)
+## Estado Actual del Proyecto
 
-| Capa                             | Tecnología                                                       | Descripción y justificación                                                                                                                                                                                                                                                                        |
-| -------------------------------- | ---------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Lenguaje principal**           | **Python 3.12**                                                  | Lenguaje multiparadigma y de uso masivo, alineado con los resultados de aprendizaje RA1, RA2 y RA3 definidos por la cátedra. Permite aplicar programación orientada a objetos y patrones de diseño.                                                                                                |
-| **Framework backend**            | **Flask**                                                        | Microframework liviano que facilita la creación de aplicaciones web modulares, con separación clara entre lógica de negocio, rutas y vistas. Permite integrar patrones de diseño como *Factory* y *Singleton* en la arquitectura.                                                                  |
-| **Base de datos**                | **SQLite** (en etapa de desarrollo) / **MySQL** (en etapa final) | Sistema de base de datos relacional compatible con SQL estándar. Se utiliza para almacenar de forma persistente las entidades principales del dominio (Clientes, Canchas, Reservas, Pagos, etc.).                                                                                                  |
-| **ORM**                          | **SQLAlchemy**                                                   | Biblioteca que facilita el mapeo objeto-relacional (ORM), permitiendo que cada clase de Python represente una tabla de la base de datos. Simplifica la implementación de la capa de persistencia y favorece la reutilización del código.                                                           |
-| **Interfaz de usuario**          | **Flet (Python)**                                                | Framework moderno para construir interfaces web reactivas directamente desde Python, sin necesidad de JavaScript. Permite crear formularios de ABM, listados, filtros y gráficos interactivos, cumpliendo con la unidad 3 del programa.                                                            |
-| **Gráficos y reportes**          | **Matplotlib / Pandas**                                          | Se emplean para generar reportes tabulares y gráficos estadísticos (por ejemplo, utilización mensual de canchas o canchas más reservadas), cumpliendo los requerimientos del caso de estudio.                                                                                                      |
-| **Patrones de diseño aplicados** | *Singleton*, *Factory*, *Strategy*, *Iterator*                   | - *Singleton*: para la conexión a la base de datos.<br>- *Factory*: para la creación controlada de entidades (Reserva, Pago, Cliente, etc.).<br>- *Strategy*: para definir distintos métodos de pago o validaciones de reserva.<br>- *Iterator*: para recorrer colecciones de reservas o reportes. |
+El proyecto consiste en un backend desarrollado con Flask que expone una API REST para la gestión de un complejo de canchas.
 
-### Justificación general
-El stack propuesto permite cumplir integralmente con los requerimientos del Trabajo Práctico Integrador, garantizando:
-- La aplicación del paradigma orientado a objetos en todas las capas del sistema.
-- La implementación de patrones de diseño GoF, tal como exige la unidad 4 del programa.
-- La persistencia de datos en una base relacional, asegurando integridad y consistencia.
-- La generación de interfaces gráficas y reportes estadísticos interactivos.
-- Un diseño modular, escalable y fácilmente extensible (por ejemplo, para incluir pagos en línea o gestión de torneos).
-En conclusión, el stack Python + Flask + SQLite/MySQL + Flet + SQLAlchemy ofrece un equilibrio ideal entre simplicidad, claridad arquitectónica y cumplimiento de las competencias técnicas requeridas por la materia.
+Funcionalidades implementadas:
+- **API Backend**: Creada con Flask y organizada en Blueprints.
+- **Base de Datos**: Configuración con SQLAlchemy para conectarse a una base de datos SQLite. Incluye un *seed* inicial para la tabla `TipoDocumento`.
+- **Endpoints de Clientes**: Se ha implementado el ABMC (CRUD) completo para la entidad `Cliente` bajo la ruta `/api/clientes`.
+- **Endpoint de Health Check**: Una ruta `/api/health` para verificar el estado del servidor.
+- **Testing**: Configuración inicial de pruebas con `pytest`, utilizando una base de datos en memoria para aislar los tests. Se incluye un test de ejemplo para el endpoint de health.
+
+## Stack Tecnológico
+
+- **Lenguaje**: Python 3.12
+- **Framework Backend**: Flask
+- **ORM**: SQLAlchemy
+- **Base de Datos**: SQLite
+- **Testing**: Pytest
+
+## Cómo Ejecutar el Proyecto
+
+### 1. Prerrequisitos
+
+Asegúrate de tener instalado Python 3.10 o superior.
+
+### 2. Configuración del Entorno
+
+Se recomienda encarecidamente utilizar un entorno virtual para aislar las dependencias del proyecto.
+
+```bash
+# 1. Crea un entorno virtual en la raíz del proyecto
+python -m venv venv
+
+# 2. Activa el entorno virtual
+# En Windows:
+.\venv\Scripts\activate
+# En macOS/Linux:
+# source venv/bin/activate
+
+# 3. Instala las dependencias necesarias
+pip install Flask SQLAlchemy pytest
+```
+
+### 3. Ejecutar la Aplicación
+
+Una vez que el entorno esté activado y las dependencias instaladas, puedes iniciar el servidor de desarrollo de Flask.
+
+```bash
+# Ejecuta el archivo principal de la aplicación
+python backend/app.py
+```
+
+El servidor estará disponible en `http://127.0.0.1:5000`. La base de datos SQLite se creará automáticamente en la carpeta `database/` si no existe.
+
+## Cómo Ejecutar las Pruebas
+
+Para verificar que todo funciona correctamente, puedes ejecutar la suite de tests automatizados.
+
+```bash
+# Desde la raíz del proyecto, simplemente ejecuta pytest
+pytest
+```
+
+Pytest descubrirá y ejecutará automáticamente todos los tests definidos en la carpeta `tests/`.
