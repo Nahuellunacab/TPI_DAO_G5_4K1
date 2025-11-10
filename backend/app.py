@@ -12,6 +12,7 @@ try:
     from Canchas import bp as canchas_bp
     from DetalleReserva import bp as detalle_reserva_bp
     from Reserva import bp as reserva_bp
+    from ReservasApi import bp as reservas_api_bp
     from Torneo import bp as torneo_bp
     from Equipo import bp as equipo_bp
     from EquipoxCliente import bp as equipoxcliente_bp
@@ -31,6 +32,7 @@ def create_app():
     app.register_blueprint(canchas_bp, url_prefix='/api')
     app.register_blueprint(detalle_reserva_bp, url_prefix='/api')
     app.register_blueprint(reserva_bp, url_prefix='/api')
+    app.register_blueprint(reservas_api_bp, url_prefix='/api')
     app.register_blueprint(torneo_bp, url_prefix='/api')
     app.register_blueprint(equipo_bp, url_prefix='/api')
     app.register_blueprint(equipoxcliente_bp, url_prefix='/api')
@@ -45,6 +47,18 @@ def create_app():
     # --- seed mínimo para TipoDocumento si está vacío ---
     try:
         from database.mapeoCanchas import SessionLocal, TipoDocumento
+        # Asegurar que la columna 'descripcion' exista en Cancha (migración ligera)
+        try:
+            from database.mapeoCanchas import ensure_cancha_descripcion_column
+            try:
+                created = ensure_cancha_descripcion_column()
+                if created:
+                    print("Migración: columna 'descripcion' añadida a Cancha")
+            except Exception:
+                # No bloquear el arranque si la migración falla; dejar que admin la resuelva.
+                pass
+        except Exception:
+            pass
         session = SessionLocal()
         try:
             cnt = session.query(TipoDocumento).count()

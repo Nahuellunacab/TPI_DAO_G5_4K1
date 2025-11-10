@@ -103,6 +103,27 @@ def get_canchaxservicio(idCxS: int):
         session.close()
 
 
+@bp.route('/canchaxservicio/cancha/<int:idCancha>', methods=['GET'])
+def list_canchaxservicio_for_cancha(idCancha: int):
+    """Devuelve todas las filas CanchaxServicio asociadas a una cancha,
+    incluyendo el detalle del servicio anidado cuando exista.
+    """
+    session = SessionLocal()
+    try:
+        rows = session.query(CanchaxServicio).filter(CanchaxServicio.idCancha == idCancha).all()
+        out = []
+        for r in rows:
+            rd = _to_dict(r)
+            try:
+                rd['servicio'] = _to_dict(session.get(Servicio, r.idServicio))
+            except Exception:
+                rd['servicio'] = {}
+            out.append(rd)
+        return jsonify(out)
+    finally:
+        session.close()
+
+
 @bp.route('/deportes/<int:idDeporte>', methods=['GET'])
 def get_deporte(idDeporte: int):
     session = SessionLocal()

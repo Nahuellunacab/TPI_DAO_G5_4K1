@@ -7,18 +7,57 @@
   --max-width: 1100px;
 }
 *{box-sizing:border-box}
-body{margin:0;font-family:Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;color:#222}
+.site-background{background:var(--gris);min-height:100vh}
+/* Apply the requested global background color to the whole page */
+body{margin:0;font-family:Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;color:#222;background:var(--gris);min-height:100vh}
 .container{max-width:var(--max-width);margin:0 auto;padding:0 16px}
 
 .site-header{background:linear-gradient(180deg, rgba(0,0,0,0.35), rgba(0,0,0,0.0));position:fixed;left:0;right:0;top:0;z-index:30}
 .header-inner{display:flex;align-items:center;justify-content:space-between;padding:12px 8px}
-.logo{height:56px}
+.logo{height:56px;cursor:pointer}
 .logo-small{height:32px}
 .nav-link{color:var(--gris);text-decoration:none;margin-left:18px;font-size:14px}
 
-.site-header{background:linear-gradient(180deg, rgba(0,0,0,0.35), rgba(0,0,0,0.0));position:fixed;left:0;right:0;top:0;z-index:30;height:72px}
-.home-root{padding-top:72px}
-.header-inner{display:flex;align-items:center;justify-content:space-between;padding:12px 8px}
+.site-header{background:var(--gris);position:fixed;left:0;right:0;top:0;z-index:30;height:88px;box-shadow:0 2px 8px rgba(0,0,0,0.06)}
+.home-root{padding-top:88px}
+/* Ensure all page root containers account for the fixed header height
+   so titles/anchors are not hidden behind the header. */
+.login-root,
+.dashboard-root,
+.sport-detail-root,
+.home-root{
+  padding-top:88px;
+}
+.header-inner{display:flex;align-items:center;justify-content:space-between;padding:14px 16px}
+.nav{display:flex;align-items:center;gap:12px}
+.nav-link{color:var(--verde-oscuro);text-decoration:none;margin-left:18px;font-size:14px}
+
+/* Button-like nav links (pills) - stronger specificity to ensure appearance */
+.nav-link.btn-reservas,
+.nav-link.btn-perfil{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  padding:8px 18px;
+  border-radius:999px;
+  font-weight:700;
+  font-size:14px;
+  line-height:1;
+  text-decoration:none;
+  color:#fff !important; /* ensure white text */
+  box-shadow:0 6px 18px rgba(0,0,0,0.08);
+  transition:transform .12s ease, filter .12s ease;
+}
+
+.btn-reservas{background:var(--azul-oscuro);border:0}
+.btn-perfil{background:var(--azul-claro);border:0}
+.nav-link.btn-reservas:hover{filter:brightness(0.95);transform:translateY(-2px)}
+.nav-link.btn-perfil:hover{filter:brightness(0.98);transform:translateY(-2px)}
+
+/* layout helper for header actions */
+.header-actions{display:flex;gap:12px;align-items:center}
+.btn-profile{padding:8px 12px;border-radius:20px}
 
 .hero{position:relative;display:flex;align-items:center;justify-content:center;min-height:calc(100vh - 72px)}
 .hero-img{position:absolute;top:0;left:0;right:0;bottom:0;width:100%;height:100%;object-fit:cover}
@@ -46,6 +85,17 @@ body{margin:0;font-family:Inter, system-ui, -apple-system, 'Segoe UI', Roboto, '
 .login-input::placeholder{text-transform:uppercase;color:#7a7a7a}
 .login-actions{display:flex;gap:12px;margin-top:8px}
 .btn-outline{background:transparent;border:2px solid rgba(255,255,255,0.45);color:var(--gris);padding:10px 18px;border-radius:8px}
+
+/* Back button (detail pages) - ensure visible text on the light background */
+.btn-back,
+.btn-outline.btn-back{
+  color: var(--azul-oscuro) !important;
+  background: transparent;
+  border: 1px solid rgba(0,0,0,0.12);
+  padding: 10px 18px;
+  border-radius: 8px;
+  font-weight:700;
+}
 .btn-primary{background:var(--azul-claro);color:#fff;padding:10px 18px;border-radius:8px}
 
 @media(max-width:600px){
@@ -56,12 +106,177 @@ body{margin:0;font-family:Inter, system-ui, -apple-system, 'Segoe UI', Roboto, '
 /* Modal / registro */
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.45);display:flex;align-items:center;justify-content:center;z-index:60}
 .modal{background:#fff;color:#222;border-radius:8px;padding:20px;width:720px;max-width:95%;box-shadow:0 10px 30px rgba(0,0,0,0.3)}
-.modal h2{margin:0 0 12px}
-.register-form .row{display:flex;flex-direction:column;gap:6px;margin-bottom:10px}
-.register-form .row label{font-size:14px;color:#333}
-.register-form .row input,.register-form .row select{padding:10px;border-radius:6px;border:1px solid #ddd}
-.register-form .actions{display:flex;justify-content:flex-end;gap:10px;margin-top:8px}
+.modal h2{margin:0 0 12px;color:var(--verde-oscuro)}
+.modal-register{width:820px;max-width:96%;padding:0;overflow:hidden}
+.modal-register{display:flex;border-radius:12px}
+.modal-register .modal-banner{flex:0 0 40%;background-image:url('/assets/hero.jpg');background-size:cover;background-position:center}
+.modal-register .modal-body{flex:1;padding:22px 24px;background:linear-gradient(180deg, rgba(245,244,242,1), rgba(243,239,233,1))}
+.register-form .row{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}
+.register-form .row label{font-size:13px;color:var(--verde-oscuro);font-weight:700}
+.register-form .row input,.register-form .row select{padding:12px;border-radius:10px;border:1px solid rgba(0,0,0,0.06);background:#fff}
+.register-form .row input::placeholder{color:#999}
+.register-form .actions{display:flex;justify-content:flex-end;gap:12px;margin-top:12px}
+
+/* Buttons styled with provided palette */
+.btn-primary{background:var(--verde-oscuro);color:#fff;padding:10px 16px;border-radius:8px;border:0;font-weight:700}
+.btn-primary:hover{background:var(--verde-claro)}
+.btn-outline{background:transparent;border:1px solid rgba(0,0,0,0.08);color:var(--verde-oscuro);padding:10px 14px;border-radius:8px}
+
+/* Destructive / danger button (uses warm red but matches overall contrast) */
+.btn-danger{background:linear-gradient(180deg,#c43a31,#9f2a20);color:#fff;padding:10px 14px;border-radius:8px;border:0;font-weight:800}
+.btn-danger:hover{filter:brightness(0.95);transform:translateY(-2px)}
+
+/* small variations used in lists */
+.btn-sm{padding:6px 10px;font-size:13px;border-radius:6px}
+
+/* Responsive tweaks */
+@media(max-width:760px){
+  .modal-register{flex-direction:column}
+  .modal-register .modal-banner{flex-basis:160px;height:160px}
+}
+
+/* Notification / toast modal (centered) */
+.notify-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;z-index:120}
+.notify-box{width:520px;max-width:92%;border-radius:10px;box-shadow:0 12px 32px rgba(0,0,0,0.36);overflow:hidden;background:linear-gradient(180deg,#1e2b20,#12210e);color:#fff;padding:18px}
+.notify-title{font-size:20px;margin:0 0 6px;font-weight:800;color:var(--gris)}
+.notify-message{font-size:15px;color:rgba(255,255,255,0.92);margin-bottom:12px}
+.notify-actions{display:flex;justify-content:flex-end}
+.notify-btn{background:var(--verde-claro);color:#fff;padding:8px 14px;border-radius:8px;border:0;font-weight:700}
+.notify-btn.close{background:transparent;border:1px solid rgba(255,255,255,0.12);color:var(--gris)}
+.notify-box.success{background:linear-gradient(180deg,#1f3a16,#12300e)}
+.notify-box.error{background:linear-gradient(180deg,#3b1a1a,#2a0f0f)}
 
 @media(max-width:700px){
   .modal{width:92%}
+}
+
+/* Dashboard / sports grid */
+.dashboard-main{padding:48px 16px 80px}
+.dashboard-title{font-size:26px;text-align:center;color:var(--verde-oscuro);margin:8px 0 28px;font-weight:700}
+.sports-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:22px}
+.sport-card{background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 8px 20px rgba(0,0,0,0.08);display:flex;flex-direction:column}
+.sport-media{position:relative;height:200px;overflow:hidden}
+.sport-media img{width:100%;height:100%;object-fit:cover;display:block}
+.sport-badge{display:none}
+.sport-body{padding:12px 14px}
+.sport-body h3{margin:0 0 6px;font-size:18px;color:var(--verde-oscuro)}
+.sport-body p{margin:0;color:#666;font-size:13px}
+.dashboard-footer{display:flex;justify-content:center;margin-top:26px}
+.btn-logout{background:var(--verde-claro);color:#fff;padding:10px 18px;border-radius:30px;border:0}
+
+@media(max-width:980px){
+  .sports-grid{grid-template-columns:repeat(2,1fr)}
+}
+@media(max-width:600px){
+  .sports-grid{grid-template-columns:1fr}
+  .sport-media{height:180px}
+}
+
+/* Sport detail styles */
+.sport-detail-main{padding:56px 16px 100px}
+.sport-title{font-size:40px;color:var(--verde-oscuro);margin:18px 0 28px}
+.sport-gallery{display:flex;gap:18px;margin-bottom:26px}
+.photo-col{flex:1;background:#fff;border-radius:12px;overflow:hidden;height:360px;display:flex;align-items:center;justify-content:center}
+.photo-col img{width:100%;height:100%;object-fit:cover}
+.single-photo img{width:100%;height:520px;object-fit:cover;border-radius:12px}
+.placeholder{width:100%;height:100%;background:linear-gradient(90deg,#eee,#ddd);border-radius:12px}
+.option-row{display:flex;justify-content:space-between;padding:18px 0}
+.price{color:#777}
+.detail-actions{display:flex;gap:12px;justify-content:center;margin-top:56px;margin-bottom:24px}
+
+/* Image hover overlay: darken image and reveal overlay with info/buttons
+  Scoped to sport detail so dashboard only acts as selector. */
+.sport-detail-root .sport-media,
+.sport-detail-root .photo-col,
+.sport-detail-root .single-photo{position:relative}
+.sport-detail-root .sport-media img,
+.sport-detail-root .photo-col img,
+.sport-detail-root .single-photo img{transition:filter .18s ease, transform .18s ease}
+.sport-detail-root .sport-media:hover img,
+.sport-detail-root .photo-col:hover img,
+.sport-detail-root .single-photo:hover img{filter:brightness(0.56);transform:scale(1.02)}
+.sport-detail-root .media-overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:18px;opacity:0;pointer-events:none;transition:opacity .18s ease}
+.sport-detail-root .sport-media:hover .media-overlay,
+.sport-detail-root .photo-col:hover .media-overlay,
+.sport-detail-root .single-photo:hover .media-overlay{opacity:1;pointer-events:auto}
+.sport-detail-root .media-overlay .overlay-content{background:rgba(0,0,0,0.38);padding:14px 18px;border-radius:10px;text-align:center;color:#fff;min-width:220px}
+.sport-detail-root .overlay-title{margin:0;font-size:18px;font-weight:800;color:#fff}
+.sport-detail-root .overlay-price{margin:6px 0 12px;color:#fff;font-weight:700}
+.sport-detail-root .overlay-actions{display:flex;gap:10px;justify-content:center}
+.sport-detail-root .btn-reserve{background:var(--azul-oscuro);color:#fff;padding:8px 14px;border-radius:8px;border:0;font-weight:700}
+.sport-detail-root .btn-add-services{background:var(--azul-claro);color:#fff;padding:8px 14px;border-radius:8px;border:0;font-weight:700}
+.sport-detail-root .btn-reserve:hover,.sport-detail-root .btn-add-services:hover{filter:brightness(0.95);transform:translateY(-2px)}
+
+@media(max-width:900px){
+  .sport-gallery{flex-direction:column}
+  .single-photo img{height:360px}
+  .detail-actions{margin-top:36px}
+}
+
+/* Reservation grid / calendar-like styles */
+.reserva-grid { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.reserva-grid thead th { background: #efece6; padding: 10px; border: 1px solid #e2ded8; font-weight:700; }
+.reserva-grid tbody td { vertical-align: middle; padding: 6px; border: 1px solid #eee; }
+.reserva-grid .time-cell { width: 180px; padding: 12px; color:#333; font-weight:700; }
+
+.res-slot { display:inline-block; width:100%; height:56px; border-radius:4px; transition: background-color .12s ease, transform .12s ease; cursor:pointer; box-shadow: 0 1px 0 rgba(0,0,0,0.03) inset; }
+.res-slot.placeholder { background: transparent; border: 1px dashed rgba(0,0,0,0.06); }
+.res-slot.available { background: #ffffff; border: 1px solid rgba(0,0,0,0.06); }
+.res-slot.available:hover { background: #9fe07a; /* brighter green for hover */ transform: translateY(-2px); }
+.res-slot.occupied { background: #2f8cc9; color: white; }
+.res-slot.unavailable { display:none; }
+
+/* Suggested block highlight (for multi-turn suggestions) */
+.res-slot.suggested { background: #9fe07a; border: 1px solid #6fbf52; }
+.res-slot.suggested:hover { background: #7fce56; transform: translateY(-2px); }
+
+/* Selected block styling */
+.res-slot.selected { background: linear-gradient(180deg,#6bd36b,#4fb24f); border: 1px solid #3e9f3e; color: #fff; position:relative }
+.res-slot.selected .confirm-btn { position:absolute; right:6px; top:6px; padding:6px 8px; border-radius:6px; border:0; background:rgba(255,255,255,0.9); color:#1b5e20; font-weight:700; opacity:0; transform:translateY(-4px); transition:opacity .12s ease, transform .12s ease }
+.res-slot.selected:hover .confirm-btn { opacity:1; transform:translateY(0) }
+
+/* Tooltip shown on hover/focus with the time range */
+.res-slot { position: relative; }
+.res-slot .slot-tooltip {
+  position: absolute;
+  top: -34px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0,0,0,0.85);
+  color: #fff;
+  padding: 6px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  line-height: 1;
+  white-space: nowrap;
+  display: none;
+  pointer-events: none;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.24);
+}
+.res-slot.available:hover .slot-tooltip,
+.res-slot.available:focus .slot-tooltip,
+.res-slot.available:focus-visible .slot-tooltip {
+  display: block;
+}
+
+/* Slight caret under tooltip */
+.res-slot .slot-tooltip::after {
+  content: '';
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 6px 6px 0 6px;
+  border-style: solid;
+  border-color: rgba(0,0,0,0.85) transparent transparent transparent;
+}
+
+.res-slot .label { display:none; }
+
+/* Small hint badge for special horarios */
+.badge-hint { display:inline-block; font-size:11px; padding:4px 8px; background:#fff2cc; color:#6a4b00; border-radius:999px; margin-left:8px }
+
+@media(max-width:900px){
+  .reserva-grid .time-cell { min-width:120px; }
+  .res-slot { height:36px }
 }

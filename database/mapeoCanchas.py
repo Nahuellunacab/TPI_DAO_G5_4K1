@@ -136,6 +136,8 @@ class Cancha(Base):
     deporte = Column(Integer, ForeignKey("Deporte.idDeporte"), nullable=False)
     precioHora = Column(Float, nullable=False)
     estado = Column(Integer, ForeignKey("EstadoCancha.idEstado"), nullable=False)
+    # Nueva columna textual para describir si la cancha es 'techada' o 'sin techar'
+    descripcion = Column(String(200), nullable=True)
 
     def __repr__(self):
         return f"<Cancha(idCancha={self.idCancha}, nombre='{self.nombre}', deporte='{self.deporte}', precioHora={self.precioHora}, estado='{self.estado}')>"
@@ -145,11 +147,44 @@ class Cancha(Base):
     estados = relationship("EstadoCancha", back_populates="cancha")
 
 
+def ensure_cancha_descripcion_column():
+    """Comprueba si la columna 'descripcion' existe en la tabla Cancha y la crea si falta.
+    Esto permite aplicar una migración sencilla en SQLite sin herramientas externas.
+    Si la columna se crea, rellenamos con 'sin techar' para filas existentes (valor conservador).
+    """
+    from sqlalchemy import inspect, text
+    insp = inspect(engine)
+    cols = [c['name'] for c in insp.get_columns('Cancha')] if 'Cancha' in insp.get_table_names() else []
+    if 'descripcion' in cols:
+        return False
+    # Añadir la columna usando ALTER TABLE (SQLite soporta ADD COLUMN).
+    conn = engine.connect()
+    trans = conn.begin()
+    try:
+        conn.execute(text('ALTER TABLE Cancha ADD COLUMN descripcion TEXT'))
+        # Rellenar con valor conservador para evitar nulos que puedan romper heurísticos
+        conn.execute(text("UPDATE Cancha SET descripcion = 'sin techar' WHERE descripcion IS NULL"))
+        trans.commit()
+        return True
+    except Exception:
+        try:
+            trans.rollback()
+        except Exception:
+            pass
+        return False
+    finally:
+        conn.close()
+
+
 class Horario(Base):
     __tablename__ = "Horario"
     idHorario = Column(Integer, primary_key=True, autoincrement=True)
-    horaInicio = Column(DateTime, nullable=False)
-    horaFin = Column(DateTime, nullable=False)
+    # The legacy DB stores time values as simple strings like '00:00' or '22:30'.
+    # Map these columns as String to avoid SQLAlchemy attempting to coerce them
+    # into full datetimes (which caused ValueError on '00:00'). This is a
+    # non-destructive change to the ORM mapping and keeps the DB schema intact.
+    horaInicio = Column(String(8), nullable=False)
+    horaFin = Column(String(8), nullable=False)
 
     def __repr__(self):
         return f"<Horario(idHorario={self.idHorario}, horaInicio={self.horaInicio}, horaFin={self.horaFin})>"
@@ -379,7 +414,8 @@ def seed_minimal_demo():
         cvs = CanchaxServicio(idCancha=cancha.idCancha, idServicio=servicio.idServicio, precioAdicional=0.0)
         session.add(cvs)
 
-        horario = Horario(horaInicio=datetime.now(), horaFin=datetime.now())
+    # Store seed horario values as HH:MM strings to match legacy data format
+        horario = Horario(horaInicio=datetime.now().strftime("%H:%M"), horaFin=datetime.now().strftime("%H:%M"))
         session.add(horario)
         session.flush()
 
