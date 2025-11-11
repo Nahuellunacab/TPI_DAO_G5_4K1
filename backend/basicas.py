@@ -1280,5 +1280,48 @@ def pagos_por_estado(idEstado: int = None, nombre: str = None) -> List[Dict[str,
         session.close()
 
 
+def utilizacion_mensual(year: int = None, idCancha: int = None) -> List[Dict[str, Any]]:
+	"""Devuelve la utilización mensual de canchas para un año dado.
+
+	Retorna una lista de 12 elementos con la forma {'month': int(1-12), 'count': int}.
+	Si se provee idCancha, filtra sólo las reservas que correspondan a esa cancha
+	(vía join con CanchaxServicio). Si no se provee, agrupa sobre todas las canchas.
+	"""
+	from datetime import date as _date
+
+	if year is None:
+		year = _date.today().year
+
+	session = SessionLocal()
+	try:
+		# Usamos strftime para extraer mes/año en sqlite. Funciona también en otros backends
+		# cuando SQLAlchemy lo traduce apropiadamente.
+		month_expr = func.strftime('%m', Reserva.fechaReservada)
+		year_expr = func.strftime('%Y', Reserva.fechaReservada)
+
+		q = (
+			session.query(month_expr.label('month'), func.count(func.distinct(Reserva.idReserva)).label('cnt'))
+			.join(DetalleReserva, Reserva.idReserva == DetalleReserva.idReserva)
+			.join(CanchaxServicio, DetalleReserva.idCxS == CanchaxServicio.idCxS)
+		)
+		if idCancha is not None:
+			q = q.filter(CanchaxServicio.idCancha == idCancha)
+
+		q = q.filter(year_expr == str(int(year))).group_by('month').order_by('month')
+		rows = q.all()
+
+		# Inicializar meses 1..12 en 0
+		out = [{'month': i, 'count': 0} for i in range(1, 13)]
+		for r in rows:
+			try:
+				m = int(r.month)
+				out[m - 1]['count'] = int(r.cnt)
+			except Exception:
+				continue
+		return out
+	finally:
+		session.close()
+
+
 
 

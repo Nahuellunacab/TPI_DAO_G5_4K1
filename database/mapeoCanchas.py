@@ -6,11 +6,12 @@ from datetime import date, datetime
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from sqlalchemy import inspect, text
-from backend.database import Base, engine, SessionLocal
+from backend.database import Base, engine, SessionLocal, DATABASE_URL
 from backend.models import (
     TipoDocumento, Cliente, Deporte, Cancha, Horario, Servicio, CanchaxServicio,
     DetalleReserva, Reserva, MetodoPago, Pago, Equipo, Torneo,
-    TorneoxCancha, Partido, EquipoxCliente, Permiso, Usuario
+    TorneoxCancha, Partido, EquipoxCliente, Permiso, Usuario,
+    EstadoCancha, EstadoReserva, EstadoTorneo, EstadoPago
 )
 
 

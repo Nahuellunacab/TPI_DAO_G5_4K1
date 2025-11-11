@@ -13,6 +13,7 @@ try:
     from DetalleReserva import bp as detalle_reserva_bp
     from Reserva import bp as reserva_bp
     from ReservasApi import bp as reservas_api_bp
+    from reports import bp as informes_bp
     from Torneo import bp as torneo_bp
     from Equipo import bp as equipo_bp
     from EquipoxCliente import bp as equipoxcliente_bp
@@ -33,6 +34,7 @@ def create_app():
     app.register_blueprint(detalle_reserva_bp, url_prefix='/api')
     app.register_blueprint(reserva_bp, url_prefix='/api')
     app.register_blueprint(reservas_api_bp, url_prefix='/api')
+    app.register_blueprint(informes_bp, url_prefix='/api')
     app.register_blueprint(torneo_bp, url_prefix='/api')
     app.register_blueprint(equipo_bp, url_prefix='/api')
     app.register_blueprint(equipoxcliente_bp, url_prefix='/api')
