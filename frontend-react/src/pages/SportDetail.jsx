@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
+import SmartImage from '../components/SmartImage'
 
 // Centralizar la lista de deportes y sus imágenes para que coincida con assets
 const SPORT_DATA = {
@@ -75,6 +76,21 @@ export default function SportDetail(){
 
   const imgs = data.imgs || []
 
+  function candidatesForCanchaAsset(c, fallbackIndex=0){
+    const list = []
+    try{
+      if (c && c.nombre){
+        const safe = String(c.nombre).trim().replace(/\s+/g,'')
+        list.push(`/assets/${safe}.jpg`, `/assets/${safe}.jpeg`, `/assets/${safe}.png`)
+        const low = safe.toLowerCase()
+        if (low !== safe) list.push(`/assets/${low}.jpg`)
+      }
+    }catch(e){/* ignore */}
+    if (imgs[fallbackIndex]) list.push(imgs[fallbackIndex])
+    list.push('/assets/placeholder.jpg')
+    return list
+  }
+
   return (
     <div className="sport-detail-root">
       <header className="site-header">
@@ -93,13 +109,13 @@ export default function SportDetail(){
         <div className="sport-gallery">
           {data.title.toLowerCase() === 'hockey' ? (
             <div className="single-photo">
-              <img src={imgs[0]} alt={data.title} />
+              <SmartImage candidates={candidatesForCanchaAsset(canchaLeft, 0)} alt={data.title} style={{width:'100%', height:360, objectFit:'cover'}} />
               <div className="media-overlay">
                 <div className="overlay-content">
                   <h4 className="overlay-title">{getCoverLabel(slug, 0)}</h4>
                   <p className="overlay-price">{canchaLeft ? `${canchaLeft.precioHora} por turno` : 'Precio no disponible'}</p>
                   <div className="overlay-actions">
-                    <Link to="/reservas" className="btn btn-reserve">Reservar</Link>
+                    <Link to={canchaLeft && canchaLeft.idCancha ? `/reservas?idCancha=${canchaLeft.idCancha}` : '/reservas'} className="btn btn-reserve">Reservar</Link>
                   </div>
                 </div>
               </div>
@@ -107,37 +123,29 @@ export default function SportDetail(){
           ) : (
             <>
               <div className="photo-col">
-                {imgs[0] ? (
-                  <>
-                    <img src={imgs[0]} alt={data.title} />
-                    <div className="media-overlay">
-                      <div className="overlay-content">
-                        <h4 className="overlay-title">{getCoverLabel(slug, 0)}</h4>
-                        <p className="overlay-price">{canchaLeft ? `${canchaLeft.precioHora} por turno` : 'Precio no disponible'}</p>
-                        <div className="overlay-actions">
-                          <Link to={canchaLeft && canchaLeft.idCancha ? `/reservas?idCancha=${canchaLeft.idCancha}` : '/reservas'} className="btn btn-reserve">Reservar</Link>
-                        </div>
-                      </div>
+                <SmartImage candidates={candidatesForCanchaAsset(canchaLeft, 0)} alt={data.title} style={{width:'100%', height:220, objectFit:'cover'}} />
+                <div className="media-overlay">
+                  <div className="overlay-content">
+                    <h4 className="overlay-title">{getCoverLabel(slug, 0)}</h4>
+                    <p className="overlay-price">{canchaLeft ? `${canchaLeft.precioHora} por turno` : 'Precio no disponible'}</p>
+                    <div className="overlay-actions">
+                      <Link to={canchaLeft && canchaLeft.idCancha ? `/reservas?idCancha=${canchaLeft.idCancha}` : '/reservas'} className="btn btn-reserve">Reservar</Link>
                     </div>
-                  </>
-                ) : <div className="placeholder" />}
+                  </div>
+                </div>
               </div>
 
               <div className="photo-col">
-                {imgs[1] ? (
-                  <>
-                    <img src={imgs[1]} alt={data.title + ' 2'} />
-                    <div className="media-overlay">
-                      <div className="overlay-content">
-                        <h4 className="overlay-title">{getCoverLabel(slug, 1)}</h4>
-                        <p className="overlay-price">{canchaRight ? `${canchaRight.precioHora} por turno` : 'Precio no disponible'}</p>
-                        <div className="overlay-actions">
-                          <Link to={canchaRight && canchaRight.idCancha ? `/reservas?idCancha=${canchaRight.idCancha}` : '/reservas'} className="btn btn-reserve">Reservar</Link>
-                        </div>
-                      </div>
+                <SmartImage candidates={candidatesForCanchaAsset(canchaRight, 1)} alt={data.title + ' 2'} style={{width:'100%', height:220, objectFit:'cover'}} />
+                <div className="media-overlay">
+                  <div className="overlay-content">
+                    <h4 className="overlay-title">{getCoverLabel(slug, 1)}</h4>
+                    <p className="overlay-price">{canchaRight ? `${canchaRight.precioHora} por turno` : 'Precio no disponible'}</p>
+                    <div className="overlay-actions">
+                      <Link to={canchaRight && canchaRight.idCancha ? `/reservas?idCancha=${canchaRight.idCancha}` : '/reservas'} className="btn btn-reserve">Reservar</Link>
                     </div>
-                  </>
-                ) : <div className="placeholder" />}
+                  </div>
+                </div>
               </div>
             </>
           )}

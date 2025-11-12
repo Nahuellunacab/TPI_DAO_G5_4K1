@@ -15,6 +15,17 @@ function startOfWeekMonday(d){
   return monday
 }
 
+// Return services to show in the UI: if the list contains 'ninguno' but
+// also other services, remove 'ninguno'. If 'ninguno' is the only service,
+// keep it so the UI can indicate that state.
+function visibleServices(arr){
+  if (!Array.isArray(arr)) return []
+  try{
+    const filtered = arr.filter(s => { const d = (s && s.servicio && s.servicio.descripcion) ? String(s.servicio.descripcion).toLowerCase() : ''; return d !== 'ninguno' })
+    return filtered.length > 0 ? filtered : arr
+  }catch(e){ return arr }
+}
+
 function formatDayHeader(date){
   // e.g., 'Lun 10/11'
   const weekday = new Intl.DateTimeFormat('es', { weekday: 'short' }).format(date)
@@ -269,7 +280,7 @@ export default function Reservas(){
   const initialServices = []
   try{
     if (isTechada && Array.isArray(servicios)){
-      for(const s of servicios){
+      for(const s of visibleServices(servicios)){
         try{
           const desc = (s.servicio && s.servicio.descripcion) ? s.servicio.descripcion.toLowerCase() : ''
           if (desc.indexOf('ilumin') >= 0 || desc.indexOf('luz') >= 0){ initialServices.push(Number(s.idCxS)); break }
@@ -321,6 +332,11 @@ export default function Reservas(){
   }
 
   async function submitReservation(payload){
+    // Frontend validation: ensure required fields exist and are valid
+    if (!payload || !payload.idCancha || !payload.fechaReservada || !payload.idCliente){
+      setModalError('Faltan datos requeridos para la reserva')
+      return
+    }
     setModalSubmitting(true)
     setModalError(null)
     try{
@@ -415,9 +431,10 @@ export default function Reservas(){
   function computeModalTotal(){
     if (!selectedSlot) return 0
     const servicios = Array.isArray(selectedSlot.servicios) ? selectedSlot.servicios : []
+    const visible = visibleServices(servicios)
     const base = Number(selectedSlot.cancha && selectedSlot.cancha.precioHora ? selectedSlot.cancha.precioHora : 0)
     let extras = 0
-    for(const s of servicios){
+    for(const s of visible){
       const sid = Number(s.idCxS)
       const desc = (s.servicio && s.servicio.descripcion) ? (s.servicio.descripcion||'').toLowerCase() : ''
       const isIllum = desc.indexOf('ilumin') >= 0 || desc.indexOf('luz') >= 0
@@ -466,7 +483,7 @@ export default function Reservas(){
       const initialServicesBlk = []
       try{
         if (isTechadaBlk && Array.isArray(servicios)){
-          for(const s of servicios){
+          for(const s of visibleServices(servicios)){
             try{ const desc = (s.servicio && s.servicio.descripcion) ? s.servicio.descripcion.toLowerCase() : ''; if (desc.indexOf('ilumin') >= 0 || desc.indexOf('luz') >= 0){ initialServicesBlk.push(Number(s.idCxS)); break } }catch(e){}
           }
         }
@@ -633,11 +650,11 @@ export default function Reservas(){
                   })()}</p>
                   <p style={{margin:0}}><strong>Horario:</strong> {formatTimeRange(selectedSlot.horario)}</p>
                   {/* Servicios disponibles para esta cancha */}
-                  {selectedSlot && Array.isArray(selectedSlot.servicios) && selectedSlot.servicios.length > 0 && (
+                  {selectedSlot && Array.isArray(selectedSlot.servicios) && visibleServices(selectedSlot.servicios).length > 0 && (
                     <div style={{marginTop:12}}>
                       <p style={{margin:0}}><strong>Servicios adicionales:</strong></p>
                       <div style={{marginTop:6}}>
-                        {selectedSlot.servicios.map(s => {
+                        {visibleServices(selectedSlot.servicios).map(s => {
                           const sid = Number(s.idCxS)
                           const desc = (s.servicio && s.servicio.descripcion) ? (s.servicio.descripcion || '').toLowerCase() : ''
                           const isIllum = desc.indexOf('ilumin') >= 0 || desc.indexOf('luz') >= 0
@@ -722,7 +739,7 @@ export default function Reservas(){
                   const finalServicios = Array.isArray(modalSelectedServices) ? [...modalSelectedServices.map(x=>Number(x))] : []
                   try{
                     if (selectedSlot && selectedSlot.isTechada && Array.isArray(selectedSlot.servicios)){
-                      for(const s of selectedSlot.servicios){
+                      for(const s of visibleServices(selectedSlot.servicios)){
                         const sid = Number(s.idCxS)
                         const desc = (s.servicio && s.servicio.descripcion) ? (s.servicio.descripcion||'').toLowerCase() : ''
                         if ((desc.indexOf('ilumin') >= 0 || desc.indexOf('luz') >= 0) && !finalServicios.includes(sid)){

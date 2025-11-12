@@ -113,11 +113,22 @@ def list_canchaxservicio_for_cancha(idCancha: int):
         rows = session.query(CanchaxServicio).filter(CanchaxServicio.idCancha == idCancha).all()
         out = []
         for r in rows:
+            # Include service detail, but hide the special 'ninguno' service from
+            # the list returned to the frontend. The 'ninguno' rows remain in the
+            # DB so server-side logic can still pick them as the default base
+            # service when needed, but users will not see it as an option.
             rd = _to_dict(r)
             try:
-                rd['servicio'] = _to_dict(session.get(Servicio, r.idServicio))
+                s = session.get(Servicio, r.idServicio)
+                s_dict = _to_dict(s) if s else {}
             except Exception:
-                rd['servicio'] = {}
+                s_dict = {}
+            # Normalize description and skip exact 'ninguno'
+            desc = (s_dict.get('descripcion') or '').strip().lower()
+            if desc == 'ninguno':
+                # skip exposing this service to the client
+                continue
+            rd['servicio'] = s_dict
             out.append(rd)
         return jsonify(out)
     finally:

@@ -11,6 +11,7 @@ from database.mapeoCanchas import (
     Cancha,
     EstadoCancha,
     Cliente as ClienteModel,
+    Usuario as UsuarioModel,
 )
 
 
@@ -63,12 +64,43 @@ class ServicioReservas:
             fecha_text = data.get('fechaReservada')
             idCliente = data.get('idCliente')
 
+            # Basic validation: required fields and types
+            if not idCancha:
+                return ({'error': 'idCancha es requerido'}, 400)
+            try:
+                idCancha = int(idCancha)
+            except Exception:
+                return ({'error': 'idCancha inválido'}, 400)
+
+            if not fecha_text:
+                return ({'error': 'fechaReservada es requerida'}, 400)
+
+            if not idCliente:
+                return ({'error': 'idCliente es requerido'}, 400)
+            try:
+                idCliente = int(idCliente)
+            except Exception:
+                return ({'error': 'idCliente inválido'}, 400)
+
+            # Require at least one horario (single idHorario or non-empty horarios array)
             if horarios_list and isinstance(horarios_list, list) and len(horarios_list) > 0:
-                horarios_to_book = [int(x) for x in horarios_list]
-            elif idHorario:
-                horarios_to_book = [int(idHorario)]
+                # normalize to ints, ignore non-numeric entries
+                normalized = []
+                for x in horarios_list:
+                    try:
+                        normalized.append(int(x))
+                    except Exception:
+                        continue
+                if len(normalized) == 0:
+                    return ({'error': 'El campo "horarios" debe contener al menos un idHorario válido'}, 400)
+                horarios_to_book = normalized
+            elif idHorario is not None:
+                try:
+                    horarios_to_book = [int(idHorario)]
+                except Exception:
+                    return ({'error': 'idHorario inválido'}, 400)
             else:
-                return ({'error': 'idCancha, fechaReservada, idCliente y al menos un idHorario u "horarios" son requeridos'}, 400)
+                return ({'error': 'Se requiere idHorario o un arreglo "horarios" con al menos un idHorario'}, 400)
 
             # parsear fecha
             try:
@@ -123,6 +155,15 @@ class ServicioReservas:
             servicios_selected = data.get('servicios') or []
             if not isinstance(servicios_selected, list):
                 servicios_selected = []
+            # Normalize servicios_selected to ints if possible; invalid entries ignored
+            normalized_servicios = []
+            for s in servicios_selected:
+                try:
+                    normalized_servicios.append(int(s))
+                except Exception:
+                    # ignore non-numeric service ids
+                    continue
+            servicios_selected = normalized_servicios
 
             valid_cxs = {c.idCxS: c for c in cxs_list}
             for s_id in servicios_selected:
@@ -133,6 +174,20 @@ class ServicioReservas:
             cliente_check = session.get(ClienteModel, idCliente)
             if not cliente_check:
                 return ({'error': 'Cliente no encontrado'}, 400)
+
+            # verificar que el cliente tenga permiso de 'cliente' (idPermiso == 1)
+            try:
+                if getattr(cliente_check, 'idUsuario', None) is None:
+                    return ({'error': 'El cliente no está asociado a un usuario con permisos válidos'}, 403)
+                usuario_obj = session.get(UsuarioModel, cliente_check.idUsuario)
+                if not usuario_obj:
+                    return ({'error': 'Usuario asociado al cliente no encontrado'}, 403)
+                # Usuario.permisos es FK hacia Permiso.idPermiso; cliente UI uses idpermiso==1
+                if getattr(usuario_obj, 'permisos', None) != 1:
+                    return ({'error': 'Permisos insuficientes para crear reservas'}, 403)
+            except Exception:
+                # If anything goes wrong while checking permissions, deny by default
+                return ({'error': 'Error verificando permisos'}, 403)
 
             # If not sqlite, attempt to lock the selected CanchaxServicio rows to avoid races
             if dialect_name != 'sqlite':
@@ -193,17 +248,43 @@ class ServicioReservas:
             extras = []
             try:
                 if is_techada:
-                    ilum_id = None
-                    for c in valid_cxs.values():
-                        try:
-                            desc = (c.servicio.descripcion or '').lower()
-                            if 'ilumin' in desc or 'luz' in desc:
-                                ilum_id = c.idCxS
-                                break
-                        except Exception:
-                            continue
-                    if ilum_id and int(ilum_id) not in [int(x) for x in servicios_selected]:
-                        servicios_selected.append(int(ilum_id))
+                    # If the chosen base service is the special 'ninguno', do not
+                    # force-add iluminación even if the cancha is techada. Also
+                    # remove any iluminación ids submitted by the client in this
+                    # case to avoid frontend auto-selection causing it to be saved.
+                    base_desc = ''
+                    try:
+                        base_desc = (cvs_base.servicio.descripcion or '').strip().lower()
+                    except Exception:
+                        base_desc = ''
+
+                    if base_desc == 'ninguno':
+                        # Respect explicit selections from the client: if the
+                        # payload included a non-empty 'servicios' array, assume
+                        # the user intentionally selected those services and
+                        # don't strip them. If the client didn't provide
+                        # servicios (or provided an empty list), then we do not
+                        # force-add iluminación and leave servicios_selected as-is
+                        # (which will typically be empty).
+                        if data.get('servicios'):
+                            # client explicitly provided services: keep them
+                            pass
+                        else:
+                            # no client selection: ensure we don't auto-add
+                            # iluminación (leave servicios_selected empty)
+                            servicios_selected = []
+                    else:
+                        ilum_id = None
+                        for c in valid_cxs.values():
+                            try:
+                                desc = (c.servicio.descripcion or '').lower()
+                                if 'ilumin' in desc or 'luz' in desc:
+                                    ilum_id = c.idCxS
+                                    break
+                            except Exception:
+                                continue
+                        if ilum_id and int(ilum_id) not in [int(x) for x in servicios_selected]:
+                            servicios_selected.append(int(ilum_id))
             except Exception:
                 pass
 
@@ -215,6 +296,12 @@ class ServicioReservas:
                 if cxs:
                     monto_total += float(cxs.precioAdicional or 0.0) * num_turnos
                     extras.append(cxs)
+
+            # Debug: mostrar qué servicios fueron finalmente seleccionados y los extras
+            try:
+                print(f"DEBUG crear_reserva_slot: servicios_selected={servicios_selected}, extras={[c.idCxS for c in extras]}, monto_total={monto_total}")
+            except Exception:
+                pass
 
             # crear reserva y detalles
             r = Reserva(idCliente=idCliente, fechaReservada=fecha, estado=1, monto=monto_total, fechaCreacion=_dt.now())

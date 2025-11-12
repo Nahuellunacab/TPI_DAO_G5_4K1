@@ -319,8 +319,9 @@ def cancha_mas_usada() -> Dict[str, Any]:
 	try:
 		# contar reservas por cancha (distinct idReserva)
 		q = (
-			session.query(DetalleReserva.idCancha.label('idCancha'), func.count(func.distinct(DetalleReserva.idReserva)).label('cnt'))
-			.group_by(DetalleReserva.idCancha)
+			session.query(CanchaxServicio.idCancha.label('idCancha'), func.count(func.distinct(DetalleReserva.idReserva)).label('cnt'))
+			.join(DetalleReserva, DetalleReserva.idCxS == CanchaxServicio.idCxS)
+			.group_by(CanchaxServicio.idCancha)
 			.order_by(desc('cnt'))
 		)
 		top = q.first()
@@ -366,7 +367,8 @@ def list_reservas_por_cancha(idCancha: int, fechaDesde=None, fechaHasta=None) ->
 		q = (
 			session.query(Reserva)
 			.join(DetalleReserva, Reserva.idReserva == DetalleReserva.idReserva)
-			.filter(DetalleReserva.idCancha == idCancha)
+			.join(CanchaxServicio, DetalleReserva.idCxS == CanchaxServicio.idCxS)
+			.filter(CanchaxServicio.idCancha == idCancha)
 			.distinct()
 		)
 
@@ -380,9 +382,11 @@ def list_reservas_por_cancha(idCancha: int, fechaDesde=None, fechaHasta=None) ->
 		results = []
 		for r in reservas:
 			rdict = _to_dict(r)
+			# Obtener sólo los detalles relacionados con esta cancha
 			detalles = (
 				session.query(DetalleReserva)
-				.filter(DetalleReserva.idReserva == r.idReserva, DetalleReserva.idCancha == idCancha)
+				.join(CanchaxServicio, DetalleReserva.idCxS == CanchaxServicio.idCxS)
+				.filter(DetalleReserva.idReserva == r.idReserva, CanchaxServicio.idCancha == idCancha)
 				.all()
 			)
 			rdict['detalles'] = [_to_dict(d) for d in detalles]

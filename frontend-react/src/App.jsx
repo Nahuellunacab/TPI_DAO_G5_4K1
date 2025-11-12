@@ -6,6 +6,7 @@ import Dashboard from './pages/Dashboard'
 import SportDetail from './pages/SportDetail'
 import Reservas from './pages/Reservas'
 import MisReservas from './pages/MisReservas'
+import Canchas from './pages/Canchas'
 
 export default function App(){
   return (
@@ -13,6 +14,7 @@ export default function App(){
       <Route path="/" element={<Home/>} />
   <Route path="/login" element={<Login/>} />
   <Route path="/dashboard" element={<Dashboard/>} />
+  <Route path="/canchas" element={<Canchas/>} />
   <Route path="/deporte/:slug" element={<SportDetail/>} />
   <Route path="/reservas" element={<Reservas/>} />
   <Route path="/mis-reservas" element={<MisReservas/>} />

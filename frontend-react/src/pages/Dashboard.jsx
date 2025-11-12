@@ -1,5 +1,6 @@
 import React from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import ManagerCalendar from './ManagerCalendar'
 
 const SPORTS_VISUALS = [
   { title: 'Futbol', img: '/assets/futbol.jpg', subtitle: 'Canchas de futbol abiertas y techadas con opciones de futbol 5 y 7.' },
@@ -12,7 +13,16 @@ const SPORTS_VISUALS = [
 
 export default function Dashboard(){
   const navigate = useNavigate()
-
+  // If user has permiso == 2 (manager), show manager calendar instead of sports grid
+  try {
+    const raw = localStorage.getItem('user')
+    const u = raw ? JSON.parse(raw) : null
+    if (u && Number(u.permisos) === 2){
+      return <ManagerCalendar />
+    }
+  } catch(e) {
+    // ignore and fall back to normal dashboard
+  }
   function handleLogout(){
     try {
       // Clear common auth storage keys if present
