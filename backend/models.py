@@ -4,6 +4,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import relationship
 from .database import Base
+from datetime import date
 
 
 class TipoDocumento(Base):
@@ -281,8 +282,26 @@ class Usuario(Base):
     usuario = Column('usuario', String(100), nullable=False, unique=True)
     contrasena = Column('contraseña', String(200), nullable=False)
     permisos = Column('permisos', Integer, ForeignKey("Permiso.idPermiso"))
+    imagen = Column(String(255), nullable=True)  # URL o path de la imagen de perfil
 
     def __repr__(self):
         return f"<Usuario(idUsuario={self.idUsuario}, usuario='{self.usuario}', permisos={self.permisos})>"
     permiso_rel = relationship("Permiso", back_populates="usuarios")
     clientes = relationship("Cliente", back_populates="usuario")
+
+class Empleado(Base):
+    __tablename__ = "Empleado"
+    idEmpleado = Column(Integer, primary_key=True, autoincrement=True)
+    idUsuario = Column(Integer, ForeignKey("Usuario.idUsuario"), nullable=False)
+    tipoDoc = Column(Integer, ForeignKey("TipoDoc.idTipoDoc"), nullable=False)
+    documento = Column(Integer, nullable=False)
+    nombre = Column(String(50))
+    apellido = Column(String(50))
+    fechaIngreso = Column(Date, default=date.today)
+    telefono = Column(Integer, unique=True)
+    mail = Column(String(50), unique=True)
+
+    def __repr__(self):
+        return f"<Empleado(idEmpleado={self.idEmpleado}, nombre='{self.nombre}', apellido='{self.apellido}', documento={self.documento})>"
+    usuario = relationship("Usuario")
+    tipo_documento = relationship("TipoDocumento")

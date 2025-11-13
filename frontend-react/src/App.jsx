@@ -7,6 +7,8 @@ import SportDetail from './pages/SportDetail'
 import Reservas from './pages/Reservas'
 import MisReservas from './pages/MisReservas'
 import Canchas from './pages/Canchas'
+import ProximasReservas from './pages/ProximasReservas'
+import Perfil from './pages/Perfil'
 
 export default function App(){
   return (
@@ -18,6 +20,8 @@ export default function App(){
   <Route path="/deporte/:slug" element={<SportDetail/>} />
   <Route path="/reservas" element={<Reservas/>} />
   <Route path="/mis-reservas" element={<MisReservas/>} />
+  <Route path="/proximas-reservas" element={<ProximasReservas/>} />
+  <Route path="/perfil" element={<Perfil/>} />
     </Routes>
   )
 }

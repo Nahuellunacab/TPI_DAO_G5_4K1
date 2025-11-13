@@ -102,13 +102,20 @@ export default function Canchas(){
       <header className="site-header">
         <div className="container header-inner">
           <img src="/assets/logo.png" alt="logo" className="logo" />
-          <nav className="nav">
-            <div className="header-actions">
-              <Link to="/dashboard" className="nav-link">Calendario</Link>
-              <Link to="/mis-reservas" className="nav-link btn-reservas">Próximas Reservas</Link>
-              <Link to="/perfil" className="nav-link btn-perfil">Mi Perfil</Link>
-            </div>
-          </nav>
+           <nav className="nav">
+               <div className="header-actions">
+               <Link to="/dashboard" className="nav-link btn-calendar">Calendario</Link>
+               <Link to="/proximas-reservas" className="nav-link btn-reservas">Próximas Reservas</Link>
+               <Link to="/perfil" className="nav-link btn-perfil">Mi Perfil</Link>
+               <button
+                 className="btn btn-logout"
+                 onClick={() => {
+                   try { localStorage.removeItem('token'); localStorage.removeItem('user'); localStorage.removeItem('auth'); sessionStorage.removeItem('token') } catch(e) {}
+                   nav('/');
+                 }}
+               >Cerrar Sesión</button>
+             </div>
+           </nav>
         </div>
       </header>
 

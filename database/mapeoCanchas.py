@@ -10,7 +10,7 @@ from backend.database import Base, engine, SessionLocal, DATABASE_URL
 from backend.models import (
     TipoDocumento, Cliente, Deporte, Cancha, Horario, Servicio, CanchaxServicio,
     DetalleReserva, Reserva, MetodoPago, Pago, Equipo, Torneo,
-    TorneoxCancha, Partido, EquipoxCliente, Permiso, Usuario,
+    TorneoxCancha, Partido, EquipoxCliente, Permiso, Usuario, Empleado,
     EstadoCancha, EstadoReserva, EstadoTorneo, EstadoPago
 )
 
@@ -55,6 +55,31 @@ def ensure_cancha_imagen_column():
                     return True
             except Exception as e:
                 print(f"Error al añadir la columna 'imagen': {e}")
+                try:
+                    trans.rollback()
+                except Exception:
+                    pass
+    return False
+
+
+def ensure_usuario_imagen_column():
+    """Comprueba si la columna 'imagen' existe en la tabla Usuario y la crea si falta.
+    Se usa para añadir una columna ligera sin requerir alembic.
+    """
+    insp = inspect(engine)
+    if 'Usuario' in insp.get_table_names():
+        cols = [c['name'] for c in insp.get_columns('Usuario')]
+        if 'imagen' not in cols:
+            try:
+                with engine.connect() as conn:
+                    trans = conn.begin()
+                    conn.execute(text('ALTER TABLE Usuario ADD COLUMN imagen TEXT'))
+                    # dejar NULL cuando no haya imagen
+                    trans.commit()
+                    print("Columna 'imagen' añadida a la tabla 'Usuario'.")
+                    return True
+            except Exception as e:
+                print(f"Error al añadir la columna 'imagen' a Usuario: {e}")
                 try:
                     trans.rollback()
                 except Exception:
@@ -116,5 +141,7 @@ if __name__ == "__main__":
 
     # Ejecutar migraciones simples si es necesario
     ensure_cancha_descripcion_column()
+    ensure_cancha_imagen_column()
+    ensure_usuario_imagen_column()
 
     print("Proceso de inicialización finalizado.")

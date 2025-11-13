@@ -4,6 +4,7 @@ import ConfirmModal from './ConfirmModal'
 
 export default function NewCanchaModalNice({ open, onClose, onCreated, editMode = false, initialCancha = null, onUpdated }) {
   const [nombre, setNombre] = useState('')
+  const [descripcion, setDescripcion] = useState('sin techar')
   const [deporte, setDeporte] = useState('')
   const [precio, setPrecio] = useState('')
   const [estado, setEstado] = useState(1)
@@ -90,6 +91,7 @@ export default function NewCanchaModalNice({ open, onClose, onCreated, editMode 
   useEffect(() => {
     if (!editMode || !initialCancha) return
     setNombre(initialCancha.nombre || '')
+    setDescripcion(initialCancha.descripcion || '')
     setDeporte(String(initialCancha.deporte || ''))
     setPrecio(initialCancha.precioHora || '')
     setEstado(initialCancha.estado || 1)
@@ -114,6 +116,7 @@ export default function NewCanchaModalNice({ open, onClose, onCreated, editMode 
         const id = initialCancha.idCancha
         const payload = {
           nombre,
+          descripcion,
           deporte: Number(deporte) || 1,
           precioHora: Number(precio) || 0,
           estado: Number(estado),
@@ -140,6 +143,7 @@ export default function NewCanchaModalNice({ open, onClose, onCreated, editMode 
         if (file) {
           const fd = new FormData()
           fd.append('nombre', nombre)
+          fd.append('descripcion', descripcion)
           fd.append('deporte', String(deporte))
           fd.append('precioHora', String(precio || '0'))
           fd.append('estado', String(estado))
@@ -154,6 +158,7 @@ export default function NewCanchaModalNice({ open, onClose, onCreated, editMode 
         } else {
           const payload = {
             nombre,
+            descripcion,
             deporte: Number(deporte) || 1,
             precioHora: Number(precio) || 0,
             estado: Number(estado)
@@ -231,6 +236,14 @@ export default function NewCanchaModalNice({ open, onClose, onCreated, editMode 
             <div className="row">
               <label>Nombre</label>
               <input value={nombre} onChange={e => setNombre(e.target.value)} required />
+            </div>
+
+            <div className="row">
+              <label>Descripción</label>
+              <select value={descripcion} onChange={e => setDescripcion(e.target.value)}>
+                <option value="sin techar">Sin techar</option>
+                <option value="techada">Techada</option>
+              </select>
             </div>
 
             <div className="row">

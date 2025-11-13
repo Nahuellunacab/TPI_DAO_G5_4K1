@@ -71,6 +71,17 @@ def create_app():
                     pass
             except Exception:
                 pass
+            # Asegurar que la columna 'imagen' exista en Usuario (migración ligera)
+            try:
+                from database.mapeoCanchas import ensure_usuario_imagen_column
+                try:
+                    created_usr_img = ensure_usuario_imagen_column()
+                    if created_usr_img:
+                        print("Migración: columna 'imagen' añadida a Usuario")
+                except Exception:
+                    pass
+            except Exception:
+                pass
         except Exception:
             pass
         session = SessionLocal()
