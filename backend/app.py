@@ -21,6 +21,8 @@ try:
     from Partido import bp as partido_bp
     from Pago import bp as pago_bp
     from Usuario import bp as usuario_bp
+    from Empleados import bp as empleados_bp
+    from Deporte import bp as deporte_bp
 except Exception as e:
     # If imports fail, raise a clearer error so the developer can fix import paths
     raise ImportError(f"Fallo al importar blueprints: {e}")
@@ -42,6 +44,8 @@ def create_app():
     app.register_blueprint(partido_bp, url_prefix='/api')
     app.register_blueprint(pago_bp, url_prefix='/api')
     app.register_blueprint(usuario_bp, url_prefix='/api')
+    app.register_blueprint(empleados_bp, url_prefix='/api')
+    app.register_blueprint(deporte_bp, url_prefix='/api')
 
     @app.route('/health')
     def health():
@@ -78,6 +82,28 @@ def create_app():
                     created_usr_img = ensure_usuario_imagen_column()
                     if created_usr_img:
                         print("Migración: columna 'imagen' añadida a Usuario")
+                except Exception:
+                    pass
+            except Exception:
+                pass
+            # Asegurar que la columna 'imagen' exista en Torneo (migración ligera)
+            try:
+                from database.mapeoCanchas import ensure_torneo_imagen_column
+                try:
+                    created_trn_img = ensure_torneo_imagen_column()
+                    if created_trn_img:
+                        print("Migración: columna 'imagen' añadida a Torneo")
+                except Exception:
+                    pass
+            except Exception:
+                pass
+            # Asegurar que la columna 'maxIntegrantes' exista en Torneo
+            try:
+                from database.mapeoCanchas import ensure_torneo_max_integrantes_column
+                try:
+                    created_max_int = ensure_torneo_max_integrantes_column()
+                    if created_max_int:
+                        print("Migración: columna 'maxIntegrantes' añadida a Torneo")
                 except Exception:
                     pass
             except Exception:

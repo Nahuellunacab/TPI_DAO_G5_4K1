@@ -87,6 +87,50 @@ def ensure_usuario_imagen_column():
     return False
 
 
+def ensure_torneo_imagen_column():
+    """Comprueba si la columna 'imagen' existe en la tabla Torneo y la crea si falta."""
+    insp = inspect(engine)
+    if 'Torneo' in insp.get_table_names():
+        cols = [c['name'] for c in insp.get_columns('Torneo')]
+        if 'imagen' not in cols:
+            try:
+                with engine.connect() as conn:
+                    trans = conn.begin()
+                    conn.execute(text('ALTER TABLE Torneo ADD COLUMN imagen TEXT'))
+                    trans.commit()
+                    print("Columna 'imagen' añadida a la tabla 'Torneo'.")
+                    return True
+            except Exception as e:
+                print(f"Error al añadir la columna 'imagen' a Torneo: {e}")
+                try:
+                    trans.rollback()
+                except Exception:
+                    pass
+    return False
+
+
+def ensure_torneo_max_integrantes_column():
+    """Comprueba si la columna 'maxIntegrantes' existe en la tabla Torneo y la crea si falta."""
+    insp = inspect(engine)
+    if 'Torneo' in insp.get_table_names():
+        cols = [c['name'] for c in insp.get_columns('Torneo')]
+        if 'maxIntegrantes' not in cols:
+            try:
+                with engine.connect() as conn:
+                    trans = conn.begin()
+                    conn.execute(text('ALTER TABLE Torneo ADD COLUMN maxIntegrantes INTEGER DEFAULT 5'))
+                    trans.commit()
+                    print("Columna 'maxIntegrantes' añadida a la tabla 'Torneo'.")
+                    return True
+            except Exception as e:
+                print(f"Error al añadir la columna 'maxIntegrantes' a Torneo: {e}")
+                try:
+                    trans.rollback()
+                except Exception:
+                    pass
+    return False
+
+
 def seed_minimal_demo():
     """Inserta filas mínimas para demostrar las relaciones, solo si la base de datos está vacía."""
     session = SessionLocal()

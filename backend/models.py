@@ -40,10 +40,10 @@ class EstadoReserva(Base):
 
 class EstadoTorneo(Base):
     __tablename__ = "EstadoTorneo"
-    idEstado = Column(Integer, primary_key=True, autoincrement=True)
+    idEstadoTorneo = Column("idEstadoTorneo", Integer, primary_key=True, autoincrement=True)
     nombre = Column(String(50), nullable=False, unique=True)
     def __repr__(self):
-        return f"<EstadoTorneo(idEstado={self.idEstado}, nombre='{self.nombre}')>"
+        return f"<EstadoTorneo(idEstadoTorneo={self.idEstadoTorneo}, nombre='{self.nombre}')>"
     torneo = relationship("Torneo", back_populates="estados")
 
 
@@ -211,14 +211,16 @@ class Equipo(Base):
 class Torneo(Base):
     __tablename__ = "Torneo"
     idTorneo = Column(Integer, primary_key=True, autoincrement=True)
-    nombre = Column(String(100), nullable=False)
+    nombreTorneo = Column("nombreTorneo", String(100), nullable=False)
     deporte = Column(Integer, ForeignKey("Deporte.idDeporte"), nullable=False)
     fechaInicio = Column(Date, nullable=False)
     fechaFin = Column(Date, nullable=False)
-    estado = Column(Integer, ForeignKey("EstadoTorneo.idEstado"), nullable=False)
+    estado = Column(Integer, ForeignKey('EstadoTorneo.idEstadoTorneo'), nullable=False)
+    imagen = Column(String(255), nullable=True)
+    maxIntegrantes = Column(Integer, nullable=True, default=5)
     
     def __repr__(self):
-        return f"<Torneo(idTorneo={self.idTorneo}, nombre='{self.nombre}', deporte='{self.deporte}', fechaInicio={self.fechaInicio}, fechaFin={self.fechaFin}, estado='{self.estado}')>"
+        return f"<Torneo(idTorneo={self.idTorneo}, nombreTorneo='{self.nombreTorneo}', deporte='{self.deporte}', fechaInicio={self.fechaInicio}, fechaFin={self.fechaFin}, estado='{self.estado}')>"
     equipos = relationship("EquipoxCliente", back_populates="torneo")
     cancha = relationship("TorneoxCancha", back_populates="torneo")
     estados = relationship("EstadoTorneo", back_populates="torneo")
@@ -246,8 +248,8 @@ class Partido(Base):
     idCancha = Column(Integer, ForeignKey("Cancha.idCancha"), nullable=False)
     fecha = Column(Date, nullable=False)
     idHorario = Column(Integer, ForeignKey("Horario.idHorario"), nullable=False)
-    idEquipoLocal = Column(Integer, ForeignKey("Equipo.idEquipo"), nullable=False)
-    idEquipoVisitante = Column(Integer, ForeignKey("Equipo.idEquipo"), nullable=False)
+    equipo1 = Column(Integer, ForeignKey("Equipo.idEquipo"), nullable=False)
+    equipo2 = Column(Integer, ForeignKey("Equipo.idEquipo"), nullable=False)
     resultado = Column(String(20))
 
 

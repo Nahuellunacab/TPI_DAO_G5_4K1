@@ -60,6 +60,7 @@ def create_reserva():
 def list_reservas():
     session = SessionLocal()
     try:
+        from database.mapeoCanchas import DetalleReserva, Horario, CanchaxServicio, Cancha
         rows = session.query(Reserva).all()
         out = []
         for r in rows:
@@ -73,6 +74,30 @@ def list_reservas():
                         d['fechaReservada'] = fr[:10]
             except Exception:
                 pass
+            
+            # Include detalles with horario and cancha info
+            detalles = []
+            try:
+                det_rows = (
+                    session.query(DetalleReserva, Horario, CanchaxServicio, Cancha)
+                    .outerjoin(Horario, DetalleReserva.idHorario == Horario.idHorario)
+                    .outerjoin(CanchaxServicio, DetalleReserva.idCxS == CanchaxServicio.idCxS)
+                    .outerjoin(Cancha, CanchaxServicio.idCancha == Cancha.idCancha)
+                    .filter(DetalleReserva.idReserva == r.idReserva)
+                    .all()
+                )
+                for det, horario, cvs, cancha in det_rows:
+                    det_dict = _to_dict(det)
+                    if horario:
+                        det_dict['horaInicio'] = horario.horaInicio
+                        det_dict['horaFin'] = horario.horaFin
+                    if cancha:
+                        det_dict['idCancha'] = cancha.idCancha
+                    detalles.append(det_dict)
+            except Exception:
+                pass
+            
+            d['detalles'] = detalles
             out.append(d)
         return jsonify(out)
     finally:

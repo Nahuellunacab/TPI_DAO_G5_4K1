@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from database.mapeoCanchas import SessionLocal, EquipoxCliente
+from database.mapeoCanchas import SessionLocal, EquipoxCliente, Cliente, Usuario, Equipo
 from basicas import _to_dict
 
 bp = Blueprint('equipoxcliente', __name__)
@@ -26,10 +26,37 @@ def create_ex():
 
 @bp.route('/equipoxcliente', methods=['GET'])
 def list_ex():
+    torneo_id = request.args.get('torneo')
     session = SessionLocal()
     try:
-        rows = session.query(EquipoxCliente).all()
-        return jsonify([_to_dict(r) for r in rows])
+        if torneo_id:
+            # Filter by torneo and join with Cliente, Usuario and Equipo to get client and team info
+            rows = session.query(
+                EquipoxCliente,
+                Cliente.nombre.label('nombreCliente'),
+                Cliente.apellido.label('apellidoCliente'),
+                Cliente.numeroDoc.label('documentoCliente'),
+                Equipo.nombre.label('nombreEquipo')
+            ).join(
+                Cliente, EquipoxCliente.idCliente == Cliente.idCliente
+            ).join(
+                Equipo, EquipoxCliente.idEquipo == Equipo.idEquipo
+            ).filter(
+                EquipoxCliente.idTorneo == int(torneo_id)
+            ).all()
+            
+            result = []
+            for exc, nombre, apellido, documento, nombreEquipo in rows:
+                obj = _to_dict(exc)
+                obj['nombreCliente'] = nombre
+                obj['apellidoCliente'] = apellido
+                obj['documentoCliente'] = documento
+                obj['nombreEquipo'] = nombreEquipo
+                result.append(obj)
+            return jsonify(result)
+        else:
+            rows = session.query(EquipoxCliente).all()
+            return jsonify([_to_dict(r) for r in rows])
     finally:
         session.close()
 

@@ -23,12 +23,17 @@ const SPORTS_VISUALS = [
 
 export default function Dashboard(){
   const navigate = useNavigate()
-  // If user has permiso == 2 (manager), show manager calendar instead of sports grid
+  // Check user permissions
+  let userPermisos = null
   try {
     const raw = localStorage.getItem('user')
     const u = raw ? JSON.parse(raw) : null
-    if (u && Number(u.permisos) === 2){
-      return <ManagerCalendar />
+    if (u) {
+      userPermisos = Number(u.permisos)
+      // If user has permiso == 2 (manager) or 3 (admin), show manager calendar instead of sports grid
+      if (userPermisos === 2 || userPermisos === 3){
+        return <ManagerCalendar />
+      }
     }
   } catch(e) {
     // ignore and fall back to normal dashboard
@@ -54,7 +59,11 @@ export default function Dashboard(){
           <img src="/assets/logo.png" alt="logo" className="logo" />
           <nav className="nav">
             <div className="header-actions">
+              <Link to="/torneos-admin" className="nav-link btn-perfil">Torneos</Link>
               <Link to="/mis-reservas" className="nav-link btn-reservas">Mis Reservas</Link>
+              {userPermisos === 3 && (
+                <Link to="/reportes" className="nav-link btn-perfil">Reportes</Link>
+              )}
               <Link to="/perfil" className="nav-link btn-perfil">Mi Perfil</Link>
             </div>
           </nav>

@@ -3,6 +3,25 @@ import { Link, useNavigate } from 'react-router-dom'
 import SmartImage from '../components/SmartImage'
 import { parseLocalDate, toYMD } from '../utils/dateUtils'
 
+const SPORT_IMAGES = {
+  futbol: '/assets/futbol.jpg',
+  tenis: '/assets/tenis.jpeg',
+  padel: '/assets/padel.jpg',
+  hockey: '/assets/hockey.jpg',
+  volley: '/assets/voleyCerrado.jpeg',
+  basquet: '/assets/basquet.jpeg'
+}
+
+// code-based asset names (in case assets were renamed to codes like t1,t2,f1...)
+const CODE_MAP = {
+  futbol: ['f1','f2'],
+  tenis: ['t1','t2'],
+  padel: ['p1','p2'],
+  hockey: ['h1','h2'],
+  volley: ['v1','v2'],
+  basquet: ['b1','b2']
+}
+
 export default function MisReservas(){
   const navigate = useNavigate()
   const [loading, setLoading] = useState(true)
@@ -43,25 +62,15 @@ export default function MisReservas(){
         const data = await res.json()
         setReservas(data)
 
-        // fetch cancha info for all distinct canchas and servicios
+        // fetch cancha info for all distinct canchas
         const canchaIds = new Set()
-        const cxsIds = new Set()
         for(const r of data){
           if (Array.isArray(r.detalles)){
             for(const d of r.detalles){ if (d.idCancha) canchaIds.add(d.idCancha) }
           }
         }
-        // Also fetch deportes to choose a sensible image when the Cancha
-        // table doesn't store an explicit image field (legacy schema).
-        const DEPORTE_IMAGE_MAP = {
-          'Futbol': '/assets/futbol.jpg',
-          'Tenis': '/assets/tenis.jpeg',
-          'Padel': '/assets/padel.jpg',
-          'Hockey': '/assets/hockey.jpg',
-          'Volley': '/assets/voleyCerrado.jpeg',
-          'Basquet': '/assets/basquet.jpeg',
-        }
 
+        // Fetch deportes for display names
         let deportesMap = {}
         try{
           const dres = await fetch('/api/deportes')
@@ -72,26 +81,20 @@ export default function MisReservas(){
           setDeportesMap(deportesMap)
         }catch(e){}
 
-  const map = {}
+        const map = {}
         await Promise.all(Array.from(canchaIds).map(async id => {
           try{
             const cRes = await fetch(`/api/canchas/${id}`)
             if (cRes.ok){
               const cjson = await cRes.json()
-              // prefer explicit cancha.imagen if present; otherwise derive from deporte
-              let img = '/assets/placeholder.jpg'
-              if (cjson.imagen) img = cjson.imagen
-              else if (cjson.deporte && deportesMap[cjson.deporte]){
-                const dn = deportesMap[cjson.deporte]
-                img = DEPORTE_IMAGE_MAP[dn] || `/assets/${dn.toLowerCase()}.jpg`
-              }
-              map[id] = { ...cjson, _imageForUi: img }
+              map[id] = cjson
             }
           } catch(e){}
         }))
-  setCanchasMap(map)
+        setCanchasMap(map)
 
         // collect idCxS values from detalles to fetch servicio descriptions
+        const cxsIds = new Set()
         for(const r of data){
           if (Array.isArray(r.detalles)){
             for(const d of r.detalles){ if (d.idCxS) cxsIds.add(d.idCxS) }
@@ -112,47 +115,45 @@ export default function MisReservas(){
       }catch(e){ console.error(e); setError(String(e)); setLoading(false) }
   }
 
-  // code-based asset names (in case assets were renamed to codes like t1,t2,f1...)
-  const CODE_MAP = {
-    futbol: ['f1','f2'],
-    tenis: ['t1','t2'],
-    padel: ['p1','p2'],
-    hockey: ['h1','h2'],
-    volley: ['v1','v2'],
-    basquet: ['b1','b2']
-  }
-
-  // Use shared parseLocalDate from utils to avoid timezone shifts
-
   function imageCandidatesForCancha(c){
     const list = []
+      // Prefer the backend-served image endpoint for this cancha (will resolve uploads/assets/remote)
+      try{ if (c && c.idCancha) list.push(`/api/canchas/${c.idCancha}/imagen`) }catch(e){}
+      // If the cancha record has an explicit imagen string, keep it as a candidate too
+      try{ if (c && c.imagen) list.push(c.imagen) }catch(e){}
     try{
-      if (c && c.nombre){
-        const safe = String(c.nombre).trim().replace(/\s+/g,'')
-        if (safe){ ['jpg','jpeg','png'].forEach(ext => list.push(`/assets/${safe}.${ext}`)) }
+      const raw = String(c.nombre || '').trim()
+      if (raw){
+        const safe = raw.replace(/\s+/g, '')
+        list.push(`/assets/${safe}.jpg`, `/assets/${safe}.jpeg`, `/assets/${safe}.png`)
         const low = safe.toLowerCase()
-        if (low !== safe){ ['jpg','jpeg','png'].forEach(ext => list.push(`/assets/${low}.${ext}`)) }
+        if (low !== safe) list.push(`/assets/${low}.jpg`, `/assets/${low}.jpeg`)
       }
     }catch(e){/* ignore */}
-
+    // sport-image fallback
     try{
-      const deporteName = c && c.deporte ? (deportesMap[c.deporte] || '') : ''
-      const key = String(deporteName).toLowerCase()
-      const normalized = key.normalize ? key.normalize('NFD').replace(/[^\w\s-]/g,'') : key
+      const nombreDeporte = deportesMap[String(c.deporte)] || ''
+      const key = String(nombreDeporte).toLowerCase()
+      // try code-based asset names for known deportes
+      const normalized = key.normalize('NFD').replace(/[^\w\s-]/g,'')
       if (normalized && CODE_MAP[normalized]){
         const codes = CODE_MAP[normalized]
         for(const code of codes){
           list.push(`/assets/${code}.jpg`, `/assets/${code}.jpeg`, `/assets/${code}.png`)
+          // also try uppercase variant (assets folder may use uppercase filenames)
           const up = String(code).toUpperCase()
           if (up !== code) list.push(`/assets/${up}.jpg`, `/assets/${up}.jpeg`, `/assets/${up}.png`)
         }
       }
+      if (key && SPORT_IMAGES[key]) list.push(SPORT_IMAGES[key])
     }catch(e){/* ignore */}
-
     // final fallback(s)
     list.push('/assets/placeholder.jpg')
-    return list
+    // remove duplicates while preserving order
+    return Array.from(new Set(list))
   }
+
+  // Use shared parseLocalDate from utils to avoid timezone shifts
 
   if (loading) return (<div style={{padding:40,textAlign:'center'}}>Cargando reservas...</div>)
   if (error) return (<div style={{padding:40,color:'crimson',textAlign:'center'}}>Error: {error}</div>)
@@ -165,6 +166,7 @@ export default function MisReservas(){
           <nav className="nav">
             <div className="header-actions">
               <Link to="/dashboard" className="nav-link btn-reservas">Reservar</Link>
+              <Link to="/torneos-admin" className="nav-link btn-perfil">Torneos</Link>
               <Link to="/perfil" className="nav-link btn-perfil">Mi Perfil</Link>
               <button onClick={() => { try{ localStorage.removeItem('token'); localStorage.removeItem('user'); localStorage.removeItem('auth'); } finally { navigate('/') } }} className="btn btn-logout">Cerrar Sesión</button>
             </div>
@@ -180,7 +182,6 @@ export default function MisReservas(){
             const dets = Array.isArray(r.detalles) ? r.detalles : []
             const canchaId = dets.length > 0 ? dets[0].idCancha : null
             const cancha = canchaId ? canchasMap[canchaId] : null
-            const img = cancha ? (cancha._imageForUi || cancha.imagen || '/assets/placeholder.jpg') : '/assets/placeholder.jpg'
             const fecha = r.fechaReservada
             const inicio = dets.length>0 && dets[0].horaInicio ? dets[0].horaInicio : ''
             // Count distinct horarios reserved (each unique idHorario is one turno)
@@ -218,8 +219,7 @@ export default function MisReservas(){
             return (
               <article key={r.idReserva} style={{width:'100%', maxWidth:640, background:'#f3efe9', borderRadius:8, boxShadow:'0 6px 18px rgba(0,0,0,0.08)', overflow:'hidden', padding:0, display:'flex', alignItems:'stretch', minHeight:180}}>
                 <div className="reserva-thumb">
-                  {/* Use fixed-size left thumbnail with object-fit cover for consistent look */}
-                  <SmartImage candidates={imageCandidatesForCancha(cancha).concat([img])} alt={cancha?cancha.nombre:'Cancha'} className="thumb-img" />
+                  <SmartImage candidates={imageCandidatesForCancha(cancha)} alt={cancha?cancha.nombre:'Cancha'} className="thumb-img" />
                 </div>
                 <div style={{flex:1, padding:'16px 18px'}}>
                   <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start'}}>

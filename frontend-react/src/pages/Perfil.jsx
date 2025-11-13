@@ -137,8 +137,9 @@ export default function Perfil(){
     return list
   }
 
-  // Check if user is manager
-  const isManager = usuario && Number(usuario.permisos) === 2
+  // Check if user is manager or admin
+  const isManager = usuario && (Number(usuario.permisos) === 2 || Number(usuario.permisos) === 3)
+  const isAdmin = usuario && Number(usuario.permisos) === 3
 
   if (loading) return (<div style={{padding:40,textAlign:'center',background:'#6FA9BB',minHeight:'100vh',color:'#fff'}}>Cargando perfil...</div>)
 
@@ -151,11 +152,25 @@ export default function Perfil(){
             <div className="header-actions">
               {isManager ? (
                 <>
-                  <Link to="/dashboard" className="nav-link">Calendario</Link>
-                  <Link to="/canchas" className="nav-link">Canchas</Link>
+                  <Link to="/proximas-reservas" className="nav-link btn-calendar">Próximas Reservas</Link>
+                  {!isAdmin && (
+                    <Link to="/torneos-admin" className="nav-link btn-perfil">Torneos</Link>
+                  )}
+                  {isAdmin && (
+                    <>
+                      <Link to="/canchas" className="nav-link btn-reservas">Canchas</Link>
+                      <Link to="/empleados" className="nav-link btn-perfil">Empleados y Usuarios</Link>
+                      <Link to="/clientes-admin" className="nav-link btn-perfil">Clientes</Link>
+                      <Link to="/torneos-admin" className="nav-link btn-perfil">Torneos</Link>
+                    </>
+                  )}
                 </>
               ) : (
-                <Link to="/dashboard" className="nav-link">Dashboard</Link>
+                <>
+                  <Link to="/reservas" className="nav-link btn-reservas">Reservar</Link>
+                  <Link to="/torneos-admin" className="nav-link btn-perfil">Torneos</Link>
+                  <Link to="/mis-reservas" className="nav-link btn-calendar">Mis Reservas</Link>
+                </>
               )}
               <button onClick={handleLogout} className="btn btn-logout">Cerrar Sesión</button>
             </div>
@@ -164,7 +179,7 @@ export default function Perfil(){
       </header>
 
       <main className="container" style={{paddingTop:120, paddingBottom:60}}>
-  <div style={{display:'flex', gap:40, maxWidth:1100, margin:'0 auto', alignItems:'flex-start'}}>
+  <div style={{display:'flex', gap:40, maxWidth:'95%', margin:'0 auto', alignItems:'flex-start'}}>
           {/* Left card - User info */}
           <div style={{
             flex:'0 0 420px',
@@ -191,18 +206,7 @@ export default function Perfil(){
             </div>
             <button
               onClick={()=>setShowEditModal(true)}
-              style={{
-                marginTop:24,
-                background:'#687D31',
-                color:'#fff',
-                border:'none',
-                padding:'10px 20px',
-                borderRadius:6,
-                cursor:'pointer',
-                fontSize:14,
-                fontWeight:600,
-                width:'100%'
-              }}
+              className="btn btn-primary btn-full"
             >
               Editar perfil
             </button>

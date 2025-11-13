@@ -19,16 +19,18 @@ export default function ProximasReservas(){
   const [deletingReserva, setDeletingReserva] = useState(null)
   const [deleteSubmitting, setDeleteSubmitting] = useState(false)
   const [deleteError, setDeleteError] = useState(null)
+  const [isAdmin, setIsAdmin] = useState(false)
 
   // Check permissions on mount
   useEffect(()=>{
     try{
       const raw = localStorage.getItem('user')
       const u = raw ? JSON.parse(raw) : null
-      if (!u || Number(u.permisos) !== 2){ 
+      if (!u || (Number(u.permisos) !== 2 && Number(u.permisos) !== 3)){ 
         navigate('/dashboard')
         return
       }
+      if (Number(u.permisos) === 3) setIsAdmin(true)
     }catch(e){ 
       navigate('/dashboard')
       return
@@ -41,18 +43,32 @@ export default function ProximasReservas(){
     setLoading(true)
     try{
       // Fetch all reservas from the system
-      const res = await fetch('/api/reservas')
+      const res = await fetch('/api/reserva')
       if (!res.ok) throw new Error('No se pudieron obtener reservas')
       const allReservas = await res.json()
+
+      console.log('Total reservas recibidas:', allReservas.length)
+      console.log('Primera reserva:', allReservas[0])
 
       // Filter by today's date and future time
       const now = new Date()
       const today = toYMD(now)
       const currentTime = now.getHours() * 60 + now.getMinutes() // minutes since midnight
 
+      console.log('Fecha de hoy (today):', today)
+      console.log('Hora actual (minutos desde medianoche):', currentTime)
+
       const futureReservas = allReservas.filter(r => {
         const fechaReservada = r.fechaReservada
-        if (fechaReservada !== today) return false // Only today's reservations
+        console.log('Comparando - fechaReservada:', fechaReservada, 'vs today:', today)
+        
+        // Normalize dates for comparison (extract just YYYY-MM-DD)
+        const reservaDate = fechaReservada ? String(fechaReservada).split('T')[0] : ''
+        
+        if (reservaDate !== today) {
+          console.log('  -> Descartada por fecha diferente')
+          return false // Only today's reservations
+        }
 
         // Check if any detalle has a future hora
         const detalles = Array.isArray(r.detalles) ? r.detalles : []
@@ -61,13 +77,21 @@ export default function ProximasReservas(){
             try {
               const [hh, mm] = String(d.horaInicio).split(':').map(Number)
               const slotTime = hh * 60 + mm
-              if (slotTime >= currentTime) return true
-            } catch(e) { /* ignore */ }
+              console.log('  -> Reserva', r.idReserva, 'horaInicio:', d.horaInicio, 'slotTime:', slotTime, 'vs currentTime:', currentTime)
+              if (slotTime >= currentTime) {
+                console.log('  -> INCLUIDA (hora futura)')
+                return true
+              }
+            } catch(e) { 
+              console.log('  -> Error parseando hora:', e)
+            }
           }
         }
+        console.log('  -> Descartada (sin horas futuras)')
         return false
       })
 
+      console.log('Reservas filtradas (futuras de hoy):', futureReservas.length)
       setReservas(futureReservas)
 
       // Fetch cancha, deporte, and service info
@@ -190,7 +214,17 @@ export default function ProximasReservas(){
           <nav className="nav">
             <div className="header-actions">
               <Link to="/dashboard" className="nav-link btn-calendar">Calendario</Link>
-              <Link to="/canchas" className="nav-link btn-reservas">Canchas</Link>
+              {!isAdmin && (
+                <Link to="/torneos-admin" className="nav-link btn-perfil">Torneos</Link>
+              )}
+              {isAdmin && (
+                <>
+                  <Link to="/canchas" className="nav-link btn-reservas">Canchas</Link>
+                  <Link to="/empleados" className="nav-link btn-perfil">Empleados y Usuarios</Link>
+                  <Link to="/clientes-admin" className="nav-link btn-perfil">Clientes</Link>
+                  <Link to="/torneos-admin" className="nav-link btn-perfil">Torneos</Link>
+                </>
+              )}
               <Link to="/perfil" className="nav-link btn-perfil">Mi Perfil</Link>
               <button onClick={handleLogout} className="btn btn-logout">Cerrar Sesión</button>
             </div>

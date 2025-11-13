@@ -46,16 +46,35 @@ def _to_dict(obj) -> Dict[str, Any]:
 	avoids AttributeError when the DB column name doesn't match the Python
 	attribute.
 	"""
+	from datetime import date, datetime
+	
 	mapper = getattr(obj, "__mapper__", None)
 	if mapper is None:
 		# Fallback: try table columns (best-effort)
-		return {col.key: getattr(obj, col.key) for col in obj.__table__.columns}
+		result = {}
+		for col in obj.__table__.columns:
+			val = getattr(obj, col.key)
+			# Convert date/datetime to string
+			if isinstance(val, datetime):
+				result[col.key] = val.strftime('%Y-%m-%d %H:%M:%S')
+			elif isinstance(val, date):
+				result[col.key] = val.strftime('%Y-%m-%d')
+			else:
+				result[col.key] = val
+		return result
 
 	result = {}
 	for attr in mapper.column_attrs:
 		key = attr.key
 		# Some mapped attributes may not be present on the instance (deferred); use getattr safely
-		result[key] = getattr(obj, key)
+		val = getattr(obj, key)
+		# Convert date/datetime to string to avoid GMT timestamp in JSON
+		if isinstance(val, datetime):
+			result[key] = val.strftime('%Y-%m-%d %H:%M:%S')
+		elif isinstance(val, date):
+			result[key] = val.strftime('%Y-%m-%d')
+		else:
+			result[key] = val
 	return result
 
 

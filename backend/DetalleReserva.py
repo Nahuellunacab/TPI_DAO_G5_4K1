@@ -80,6 +80,16 @@ def delete_detalle(id):
     finally:
         session.close()
 
+@bp.route('/canchaxservicio', methods=['GET'])
+def get_all_canchaxservicio():
+    """Devuelve todas las filas CanchaxServicio."""
+    session = SessionLocal()
+    try:
+        rows = session.query(CanchaxServicio).all()
+        return jsonify([_to_dict(r) for r in rows])
+    finally:
+        session.close()
+
 @bp.route('/canchaxservicio/<int:idCxS>', methods=['GET'])
 def get_canchaxservicio(idCxS: int):
     """Devuelve detalle de una fila CanchaxServicio incluyendo cancha y servicio anidados."""

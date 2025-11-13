@@ -36,6 +36,23 @@ export default function Canchas(){
   const [showNewCancha, setShowNewCancha] = useState(false)
   const nav = useNavigate()
 
+  // Check if user is admin (permisos === 3)
+  const [isAdmin, setIsAdmin] = useState(false)
+  useEffect(()=>{
+    try{
+      const raw = localStorage.getItem('user')
+      const u = raw ? JSON.parse(raw) : null
+      // Only allow admin users (permisos === 3)
+      if (!u || Number(u.permisos) !== 3) {
+        nav('/dashboard')
+        return
+      }
+      setIsAdmin(true)
+    }catch(e){
+      nav('/dashboard')
+    }
+  }, [nav])
+
   useEffect(()=>{
     async function load(){
       try{
@@ -106,6 +123,13 @@ export default function Canchas(){
                <div className="header-actions">
                <Link to="/dashboard" className="nav-link btn-calendar">Calendario</Link>
                <Link to="/proximas-reservas" className="nav-link btn-reservas">Próximas Reservas</Link>
+               {isAdmin && (
+                 <>
+                   <Link to="/empleados" className="nav-link btn-perfil">Empleados y Usuarios</Link>
+                   <Link to="/clientes-admin" className="nav-link btn-perfil">Clientes</Link>
+                   <Link to="/torneos-admin" className="nav-link btn-perfil">Torneos</Link>
+                 </>
+               )}
                <Link to="/perfil" className="nav-link btn-perfil">Mi Perfil</Link>
                <button
                  className="btn btn-logout"
@@ -173,14 +197,52 @@ export default function Canchas(){
               </article>
             ))}
             {/* Add-card: frame to create a new cancha (placed inside the same grid so it matches thumbnails) */}
-            <article className="sport-card" style={{display:'flex',flexDirection:'column',cursor:'pointer'}} onClick={()=>setShowNewCancha(true)}>
-              <div className="sport-media add-card-frame" style={{position:'relative'}}>
-                <div style={{textAlign:'center', color:'#666'}}>
-                  <div className="plus">＋</div>
-                </div>
-              </div>
-              <div className="sport-body" style={{padding:'8px 12px', textAlign:'center'}}>
-                <h3 style={{margin:0, fontSize:16}}>Agregar cancha</h3>
+            <article 
+              className="sport-card" 
+              style={{
+                display:'flex',
+                flexDirection:'column',
+                cursor:'pointer',
+                border:'none',
+                background:'linear-gradient(135deg, #19350C 0%, #687D31 100%)',
+                transition:'all 0.3s',
+                position:'relative',
+                overflow:'hidden'
+              }}
+              onClick={()=>setShowNewCancha(true)}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'scale(1.02)'
+                e.currentTarget.style.boxShadow = '0 8px 20px rgba(0,0,0,0.3)'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'scale(1)'
+                e.currentTarget.style.boxShadow = 'none'
+              }}
+            >
+              <div style={{
+                display:'flex',
+                flexDirection:'column',
+                alignItems:'center',
+                justifyContent:'center',
+                flex:1,
+                minHeight:'280px',
+                padding:'20px'
+              }}>
+                <div style={{
+                  fontSize:80,
+                  fontWeight:200,
+                  lineHeight:1,
+                  color:'white',
+                  opacity:0.9,
+                  marginBottom:16
+                }}>+</div>
+                <h3 style={{
+                  margin:0,
+                  fontSize:18,
+                  color:'white',
+                  fontWeight:600,
+                  letterSpacing:'0.5px'
+                }}>Agregar Cancha</h3>
               </div>
             </article>
           </div>

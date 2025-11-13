@@ -9,6 +9,10 @@ import MisReservas from './pages/MisReservas'
 import Canchas from './pages/Canchas'
 import ProximasReservas from './pages/ProximasReservas'
 import Perfil from './pages/Perfil'
+import Empleados from './pages/Empleados'
+import ClientesAdmin from './pages/ClientesAdmin'
+import TorneosAdmin from './pages/TorneosAdmin'
+import Reportes from './pages/Reportes'
 
 export default function App(){
   return (
@@ -22,6 +26,10 @@ export default function App(){
   <Route path="/mis-reservas" element={<MisReservas/>} />
   <Route path="/proximas-reservas" element={<ProximasReservas/>} />
   <Route path="/perfil" element={<Perfil/>} />
+  <Route path="/empleados" element={<Empleados/>} />
+  <Route path="/clientes-admin" element={<ClientesAdmin/>} />
+  <Route path="/torneos-admin" element={<TorneosAdmin/>} />
+  <Route path="/reportes" element={<Reportes/>} />
     </Routes>
   )
 }
