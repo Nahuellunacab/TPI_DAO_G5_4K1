@@ -3,7 +3,7 @@ from flask import send_file
 import os
 from werkzeug.utils import secure_filename
 from uuid import uuid4
-from database.mapeoCanchas import SessionLocal, Cancha, Deporte, EstadoCancha
+from database.mapeoCanchas import SessionLocal, Cancha, Deporte, EstadoCancha, CanchaxServicio
 from basicas import _to_dict
 # import engine/Base for reflection fallback
 from backend.database import engine
@@ -186,6 +186,27 @@ def registrar_cancha():
                         c.imagen = f"/uploads/{newname}"
                         session.commit()
 
+            # Procesar servicios enviados (si vienen como form field JSON-string 'servicios')
+            serv_field = request.form.get('servicios')
+            if serv_field:
+                try:
+                    import json
+                    servs = json.loads(serv_field)
+                    # esperar lista de objetos {idServicio, precioAdicional}
+                    for sv in servs:
+                        try:
+                            idS = int(sv.get('idServicio'))
+                            precio = float(sv.get('precioAdicional', 0))
+                            # crear asociación CanchaxServicio
+                            cxs = CanchaxServicio(idCancha=c.idCancha, idServicio=idS, precioAdicional=precio)
+                            session.add(cxs)
+                        except Exception:
+                            # ignorar entradas inválidas
+                            continue
+                    session.commit()
+                except Exception:
+                    session.rollback()
+
             return jsonify(_to_dict(c)), 201
 
         # Fallback: JSON body create (existing behavior)
@@ -196,6 +217,21 @@ def registrar_cancha():
         session.add(c)
         session.commit()
         session.refresh(c)
+        # Si el payload incluye 'servicios' (array de objetos {idServicio, precioAdicional}) crearlos
+        try:
+            servs = data.get('servicios') or []
+            if isinstance(servs, list) and len(servs) > 0:
+                for sv in servs:
+                    try:
+                        idS = int(sv.get('idServicio'))
+                        precio = float(sv.get('precioAdicional', 0))
+                        cxs = CanchaxServicio(idCancha=c.idCancha, idServicio=idS, precioAdicional=precio)
+                        session.add(cxs)
+                    except Exception:
+                        continue
+                session.commit()
+        except Exception:
+            session.rollback()
         return jsonify(_to_dict(c)), 201
     except Exception as e:
         session.rollback()
@@ -293,6 +329,29 @@ def modificar_datos_cancha(idCancha):
         for k, v in data.items():
             if k in allowed:
                 setattr(c, k, v)
+        # If the payload includes 'servicios', perform upsert of CanchaxServicio rows
+        servs = data.get('servicios')
+        if isinstance(servs, list) and len(servs) > 0:
+            try:
+                from database.mapeoCanchas import CanchaxServicio
+                for sv in servs:
+                    try:
+                        idS = int(sv.get('idServicio'))
+                        precio = float(sv.get('precioAdicional', 0))
+                    except Exception:
+                        continue
+                    # try to find existing association
+                    existing = session.query(CanchaxServicio).filter(CanchaxServicio.idCancha == idCancha, CanchaxServicio.idServicio == idS).first()
+                    if existing:
+                        existing.precioAdicional = precio
+                    else:
+                        # create new association
+                        cxs = CanchaxServicio(idCancha=idCancha, idServicio=idS, precioAdicional=precio)
+                        session.add(cxs)
+                # commit changes for servicios alongside other updates
+                session.commit()
+            except Exception:
+                session.rollback()
         session.commit()
         return jsonify({'success': True})
     except Exception as e:
@@ -324,6 +383,18 @@ def listar_deportes():
     session = SessionLocal()
     try:
         rows = session.query(Deporte).all()
+        return jsonify([_to_dict(r) for r in rows])
+    finally:
+        session.close()
+
+
+@bp.route('/servicios', methods=['GET'])
+def listar_servicios():
+    """Devuelve la lista de servicios disponibles."""
+    session = SessionLocal()
+    try:
+        from database.mapeoCanchas import Servicio
+        rows = session.query(Servicio).all()
         return jsonify([_to_dict(r) for r in rows])
     finally:
         session.close()

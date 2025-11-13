@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import SmartImage from './SmartImage'
 import Notify from './Notify'
 import { parseLocalDate, toYMD } from '../utils/dateUtils'
+import NewCanchaModalNice from './NewCanchaModalNice'
 
 export default function CanchaModal({ idCancha, onClose }){
   const [cancha, setCancha] = useState(null)
@@ -19,6 +20,7 @@ export default function CanchaModal({ idCancha, onClose }){
   const [previewEditUrl, setPreviewEditUrl] = useState(null)
   const [saving, setSaving] = useState(false)
   const [notify, setNotify] = useState(null)
+  const [showEditModal, setShowEditModal] = useState(false)
 
   useEffect(()=>{
     if (!idCancha) return
@@ -174,36 +176,12 @@ export default function CanchaModal({ idCancha, onClose }){
                 </div>
 
                 <div style={{flex:1}}>
-                  {!editing ? (
-                    <>
-                      <p style={{margin:'4px 0'}}><strong>Nombre:</strong> {cancha.nombre}</p>
-                      <p style={{margin:'4px 0'}}><strong>Deporte:</strong> {cancha && (cancha.deporteNombre || deportesMap[String(cancha.deporte)] || cancha.deporte)}</p>
-                      <p style={{margin:'4px 0'}}><strong>Precio hora:</strong> {cancha.precioHora ? `$${cancha.precioHora}` : 'N/D'}</p>
-                      <p style={{margin:'4px 0'}}><strong>Estado:</strong> {cancha && (cancha.estadoNombre || estadosMap[String(cancha.estado)] || cancha.estado)}</p>
-                    </>
-                  ) : (
-                    <div style={{display:'grid', gap:8}}>
-                      <label>Nombre<input value={nombreEdit} onChange={e=>setNombreEdit(e.target.value)} /></label>
-                      <label>Deporte
-                        <select value={deporteEdit} onChange={e=>setDeporteEdit(e.target.value)}>
-                          {Object.entries(deportesMap).map(([k,v]) => (<option key={k} value={k}>{v}</option>))}
-                        </select>
-                      </label>
-                      <label>Precio por hora<input value={precioEdit} onChange={e=>setPrecioEdit(e.target.value)} /></label>
-                      <label>Estado
-                        <select value={estadoEdit} onChange={e=>setEstadoEdit(Number(e.target.value))}>
-                          {Object.entries(estadosMap).map(([k,v]) => (<option key={k} value={k}>{v}</option>))}
-                        </select>
-                      </label>
-
-                      <div style={{display:'flex', gap:8, alignItems:'center'}}>
-                        <input id="cancha-file-input" type="file" accept="image/*" style={{display:'none'}} onChange={e=>{ const f = e.target.files && e.target.files[0]; if (f){ setFileEdit(f); setPreviewEditUrl(URL.createObjectURL(f)) } }} />
-                        <label htmlFor="cancha-file-input" className="btn btn-outline" style={{cursor:'pointer'}}>Seleccionar imagen</label>
-                        <div style={{fontSize:13, color:'#555'}}>{fileEdit ? fileEdit.name : (previewEditUrl ? 'Imagen seleccionada' : <em style={{color:'#999'}}>Ningún archivo</em>)}</div>
-                        {fileEdit || previewEditUrl ? <button type="button" className="btn btn-outline" onClick={()=>{ if (previewEditUrl && fileEdit){ URL.revokeObjectURL(previewEditUrl) } setFileEdit(null); setPreviewEditUrl(cancha.imagen || null) }}>Quitar</button> : null}
-                      </div>
-                    </div>
-                  )}
+                  <>
+                    <p style={{margin:'4px 0'}}><strong>Nombre:</strong> {cancha.nombre}</p>
+                    <p style={{margin:'4px 0'}}><strong>Deporte:</strong> {cancha && (cancha.deporteNombre || deportesMap[String(cancha.deporte)] || cancha.deporte)}</p>
+                    <p style={{margin:'4px 0'}}><strong>Precio hora:</strong> {cancha.precioHora ? `$${cancha.precioHora}` : 'N/D'}</p>
+                    <p style={{margin:'4px 0'}}><strong>Estado:</strong> {cancha && (cancha.estadoNombre || estadosMap[String(cancha.estado)] || cancha.estado)}</p>
+                  </>
 
                   <p style={{margin:'12px 0 4px'}}><strong>Reservas</strong></p>
                   <ul>
@@ -212,14 +190,7 @@ export default function CanchaModal({ idCancha, onClose }){
                   </ul>
 
                   <div style={{display:'flex', justifyContent:'flex-end', gap:8, marginTop:12}}>
-                    {!editing ? (
-                      <button className="btn btn-outline" onClick={()=>setEditing(true)}>Editar</button>
-                    ) : (
-                      <>
-                        <button className="btn btn-outline" onClick={()=>{ setEditing(false); setFileEdit(null); setPreviewEditUrl(cancha.imagen || null) }}>Cancelar</button>
-                        <button className="btn btn-primary" disabled={saving} onClick={handleSave}>Guardar</button>
-                      </>
-                    )}
+                    <button className="btn btn-outline" onClick={()=>setShowEditModal(true)}>Editar</button>
                   </div>
                 </div>
               </div>
@@ -258,6 +229,15 @@ export default function CanchaModal({ idCancha, onClose }){
           )}
         </div>
       </div>
+      {showEditModal && cancha ? (
+        <NewCanchaModalNice
+          open={showEditModal}
+          onClose={() => setShowEditModal(false)}
+          editMode={true}
+          initialCancha={cancha}
+          onUpdated={(c) => { if (c) setCancha(c); /* leave modal open until child shows confirmation and closes it */ }}
+        />
+      ) : null}
       {notify ? <Notify {...notify} onClose={()=>setNotify(null)} /> : null}
     </div>
   )
