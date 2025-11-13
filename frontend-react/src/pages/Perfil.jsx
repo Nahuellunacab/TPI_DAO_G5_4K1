@@ -162,12 +162,14 @@ export default function Perfil(){
                       <Link to="/empleados" className="nav-link btn-perfil">Empleados y Usuarios</Link>
                       <Link to="/clientes-admin" className="nav-link btn-perfil">Clientes</Link>
                       <Link to="/torneos-admin" className="nav-link btn-perfil">Torneos</Link>
+                      <Link to="/pagos" className="nav-link btn-perfil">Pagos</Link>
+                      <Link to="/reportes" className="nav-link btn-perfil">Reportes</Link>
                     </>
                   )}
                 </>
               ) : (
                 <>
-                  <Link to="/reservas" className="nav-link btn-reservas">Reservar</Link>
+                  <Link to="/dashboard" className="nav-link btn-reservas">Reservas</Link>
                   <Link to="/torneos-admin" className="nav-link btn-perfil">Torneos</Link>
                   <Link to="/mis-reservas" className="nav-link btn-calendar">Mis Reservas</Link>
                 </>
@@ -178,73 +180,94 @@ export default function Perfil(){
         </div>
       </header>
 
-      <main className="container" style={{paddingTop:120, paddingBottom:60}}>
-  <div style={{display:'flex', gap:40, maxWidth:'95%', margin:'0 auto', alignItems:'flex-start'}}>
-          {/* Left card - User info */}
-          <div style={{
-            flex:'0 0 420px',
-            background:'rgba(255,255,255,0.15)',
-            backdropFilter:'blur(10px)',
-            border:'2px dashed rgba(255,255,255,0.3)',
-            borderRadius:12,
-            padding:'30px 24px',
-            color:'#fff',
-            minHeight:320
-          }}>
-            <h2 style={{margin:'0 0 20px', fontSize:24, fontWeight:700, color:'#fff'}}>Mi Perfil</h2>
-            <div style={{fontSize:14, lineHeight:1.8}}>
-              <div><strong>Usuario:</strong> {usuario?.usuario || 'N/A'}</div>
-              <div><strong>Nombre:</strong> {usuario?.nombre || 'N/A'}</div>
-              <div><strong>Apellido:</strong> {usuario?.apellido || 'N/A'}</div>
-              <div><strong>Teléfono:</strong> {usuario?.telefono || 'N/A'}</div>
-              <div><strong>Email:</strong> {usuario?.mail || 'N/A'}</div>
-              {usuario?.tipoRegistro && (
-                <div style={{marginTop:8, fontSize:12, opacity:0.8}}>
-                  <em>Datos de: {usuario.tipoRegistro === 'cliente' ? 'Cliente' : 'Empleado'}</em>
-                </div>
-              )}
-            </div>
-            <button
-              onClick={()=>setShowEditModal(true)}
-              className="btn btn-primary btn-full"
-            >
-              Editar perfil
-            </button>
-          </div>
-
-          {/* Right - Profile picture */}
-          <div style={{
-            flex:1,
-            display:'flex',
-            justifyContent:'center',
-            alignItems:'center'
-          }}>
+      <main className="container" style={{paddingTop:120, paddingBottom:60, display:'flex', justifyContent:'center', alignItems:'center', minHeight:'calc(100vh - 180px)'}}>
+        <div style={{
+          background:'rgba(255,255,255,0.95)',
+          borderRadius:20,
+          padding:50,
+          boxShadow:'0 12px 40px rgba(0,0,0,0.25)',
+          maxWidth:700,
+          width:'100%'
+        }}>
+          {/* Header con avatar y nombre */}
+          <div style={{display:'flex', flexDirection:'column', alignItems:'center', marginBottom:40, gap:20}}>
             <div style={{
-              width:280,
-              height:280,
+              width:200,
+              height:200,
               borderRadius:'50%',
               overflow:'hidden',
-              border:'4px solid rgba(255,255,255,0.5)',
-              background:'#fff',
-              boxShadow:'0 8px 24px rgba(0,0,0,0.2)'
+              border:'6px solid var(--azul-claro)',
+              background:'#f0f0f0',
+              flexShrink:0,
+              boxShadow:'0 8px 20px rgba(0,0,0,0.15)'
             }}>
               <SmartImage
                 candidates={imageCandidatesForUser(usuario)}
-                alt="Foto de perfil"
-                style={{
-                  width:'100%',
-                  height:'100%',
-                  objectFit:'cover',
-                  display:'block'
-                }}
+                alt="Avatar"
+                style={{width:'100%', height:'100%', objectFit:'cover'}}
               />
             </div>
+            <div style={{textAlign:'center'}}>
+              <h2 style={{margin:0, fontSize:32, fontWeight:700, color:'var(--verde-oscuro)'}}>
+                {usuario?.nombre || 'Usuario'} {usuario?.apellido || ''}
+              </h2>
+              <div style={{fontSize:16, color:'#666', marginTop:8}}>
+                @{usuario?.usuario || 'usuario'}
+              </div>
+            </div>
           </div>
-        </div>
 
-        <footer style={{textAlign:'center', marginTop:60, color:'#333', fontSize:13}}>
-          GoField, tus canchas en todo momento.
-        </footer>
+          {/* Información del usuario */}
+          <div style={{fontSize:16, lineHeight:2.2, color:'#333', marginBottom:40}}>
+            <div style={{display:'flex', alignItems:'center', gap:12, padding:'14px 0', borderBottom:'1px solid #e5e7eb'}}>
+              <span style={{fontWeight:600, color:'var(--azul-oscuro)', minWidth:130}}>📧 Email:</span>
+              <span>{usuario?.mail || 'No especificado'}</span>
+            </div>
+            <div style={{display:'flex', alignItems:'center', gap:12, padding:'14px 0', borderBottom:'1px solid #e5e7eb'}}>
+              <span style={{fontWeight:600, color:'var(--azul-oscuro)', minWidth:130}}>📱 Teléfono:</span>
+              <span>{usuario?.telefono || 'No especificado'}</span>
+            </div>
+            <div style={{display:'flex', alignItems:'center', gap:12, padding:'14px 0', borderBottom:'1px solid #e5e7eb'}}>
+              <span style={{fontWeight:600, color:'var(--azul-oscuro)', minWidth:130}}>👤 Usuario:</span>
+              <span>{usuario?.usuario || 'N/A'}</span>
+            </div>
+            <div style={{display:'flex', alignItems:'center', gap:12, padding:'14px 0'}}>
+              <span style={{fontWeight:600, color:'var(--azul-oscuro)', minWidth:130}}>🔑 Rol:</span>
+              <span style={{
+                background: isAdmin ? '#10b981' : isManager ? '#3b82f6' : '#f59e0b',
+                color:'white',
+                padding:'6px 16px',
+                borderRadius:14,
+                fontSize:14,
+                fontWeight:600
+              }}>
+                {isAdmin ? 'Administrador' : isManager ? 'Supervisor' : 'Cliente'}
+              </span>
+            </div>
+          </div>
+
+          {/* Botón de editar */}
+          <button
+            onClick={()=>setShowEditModal(true)}
+            style={{
+              width:'100%',
+              padding:'16px',
+              background:'linear-gradient(135deg, var(--verde-claro) 0%, var(--verde-oscuro) 100%)',
+              color:'white',
+              border:'none',
+              borderRadius:12,
+              fontSize:17,
+              fontWeight:600,
+              cursor:'pointer',
+              transition:'transform 0.2s',
+              boxShadow:'0 4px 12px rgba(0,0,0,0.15)'
+            }}
+            onMouseOver={e => e.currentTarget.style.transform = 'translateY(-2px)'}
+            onMouseOut={e => e.currentTarget.style.transform = 'translateY(0)'}
+          >
+            ✏️ Editar Perfil
+          </button>
+        </div>
       </main>
 
       {/* Edit Modal */}

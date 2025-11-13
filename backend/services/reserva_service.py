@@ -242,6 +242,24 @@ class ServicioReservas:
             except Exception:
                 is_techada = False
 
+            # Check if any horario is after 18:00 (requires iluminación)
+            requires_iluminacion_by_time = False
+            try:
+                for hid in horarios_to_book:
+                    hor = session.get(Horario, int(hid))
+                    if hor and hor.horaInicio:
+                        # Parse horaInicio (format: "HH:MM" or "HH:MM:SS")
+                        hora_str = str(hor.horaInicio).split(':')[0]
+                        try:
+                            hora_int = int(hora_str)
+                            if hora_int >= 18:  # 18:00 o posterior
+                                requires_iluminacion_by_time = True
+                                break
+                        except Exception:
+                            continue
+            except Exception:
+                pass
+
             num_turnos = len(horarios_to_book)
             monto_total = float(cancha.precioHora or 0.0) * num_turnos
             # Services that should be charged only once per reservation (not per turno)
@@ -249,7 +267,10 @@ class ServicioReservas:
 
             extras = []
             try:
-                if is_techada:
+                # Iluminación is required if:
+                # 1. Cancha is techada, OR
+                # 2. Any horario starts at or after 18:00
+                if is_techada or requires_iluminacion_by_time:
                     # If the chosen base service is the special 'ninguno', do not
                     # force-add iluminación even if the cancha is techada. Also
                     # remove any iluminación ids submitted by the client in this

@@ -156,6 +156,11 @@ def reporte_reservas_cancha():
         tipos_doc = list_tipos_documento()
         tipo_doc_map = {t['idTipoDoc']: t['nombre'] for t in tipos_doc}
         
+        # Obtener nombre del deporte de la cancha
+        deporte_nombre = 'N/A'
+        if cancha and cancha.get('deporte'):
+            deporte_nombre = deporte_map.get(cancha.get('deporte'), 'N/A')
+        
         # Enriquecer cada reserva con información del cliente
         for reserva in reservas:
             cliente = get_cliente(reserva.get('idCliente'))
@@ -171,7 +176,7 @@ def reporte_reservas_cancha():
         
         return jsonify({
             'cancha': cancha,
-            'deporte': deporte_map.get(cancha.get('deporte')),
+            'deporte': deporte_nombre,
             'reservas': reservas,
             'cantidad_reservas': len(reservas),
             'total_monto': total_monto,

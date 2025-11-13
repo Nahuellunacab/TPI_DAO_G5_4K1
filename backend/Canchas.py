@@ -259,6 +259,9 @@ def get_cancha(idCancha: int):
             return jsonify({'error': 'Cancha no encontrada'}), 404
         # devolver el dict básico y añadir nombres legibles para deporte/estado
         data = _to_dict(c)
+        # Ensure descripcion is included (needed for techada detection)
+        if hasattr(c, 'descripcion') and c.descripcion:
+            data['descripcion'] = c.descripcion
         try:
             # Intentar resolver nombre de deporte y estado; si no existen, intentar
             # una consulta reflectiva segura contra la tabla real.

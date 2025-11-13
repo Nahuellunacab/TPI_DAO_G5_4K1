@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import SmartImage from '../components/SmartImage'
+import PagoModal from '../components/PagoModal'
 import { parseLocalDate, toYMD } from '../utils/dateUtils'
 
 export default function ProximasReservas(){
@@ -20,6 +21,9 @@ export default function ProximasReservas(){
   const [deleteSubmitting, setDeleteSubmitting] = useState(false)
   const [deleteError, setDeleteError] = useState(null)
   const [isAdmin, setIsAdmin] = useState(false)
+  const [showPagoModal, setShowPagoModal] = useState(false)
+  const [reservaParaPago, setReservaParaPago] = useState(null)
+  const [pagosMap, setPagosMap] = useState({}) // Map de idReserva -> pago
 
   // Check permissions on mount
   useEffect(()=>{
@@ -93,6 +97,22 @@ export default function ProximasReservas(){
 
       console.log('Reservas filtradas (futuras de hoy):', futureReservas.length)
       setReservas(futureReservas)
+
+      // Cargar información de pagos para cada reserva
+      const pagosMapTemp = {}
+      await Promise.all(futureReservas.map(async (r) => {
+        try {
+          const pagoRes = await fetch(`/api/pagos/reserva/${r.idReserva}`)
+          if (pagoRes.ok) {
+            const pagoData = await pagoRes.json()
+            pagosMapTemp[r.idReserva] = pagoData
+          }
+        } catch(e) {
+          // No hay pago para esta reserva
+          console.log('No se encontró pago para reserva', r.idReserva)
+        }
+      }))
+      setPagosMap(pagosMapTemp)
 
       // Fetch cancha, deporte, and service info
       const canchaIds = new Set()
@@ -223,6 +243,8 @@ export default function ProximasReservas(){
                   <Link to="/empleados" className="nav-link btn-perfil">Empleados y Usuarios</Link>
                   <Link to="/clientes-admin" className="nav-link btn-perfil">Clientes</Link>
                   <Link to="/torneos-admin" className="nav-link btn-perfil">Torneos</Link>
+                  <Link to="/pagos" className="nav-link btn-perfil">Pagos</Link>
+                  <Link to="/reportes" className="nav-link btn-perfil">Reportes</Link>
                 </>
               )}
               <Link to="/perfil" className="nav-link btn-perfil">Mi Perfil</Link>
@@ -234,23 +256,6 @@ export default function ProximasReservas(){
 
       <main className="container" style={{paddingTop:100, paddingBottom:60}}>
         <h1 style={{textAlign:'center', color:'#fff', fontSize:36, marginBottom:40}}>Próximas Reservas</h1>
-
-        {/* Tab selector */}
-        <div style={{textAlign:'center', marginBottom:30}}>
-          <button 
-            style={{
-              background:'#d9d9d9', 
-              border:'none', 
-              padding:'10px 24px', 
-              borderRadius:6,
-              fontSize:14,
-              fontWeight:600,
-              cursor:'pointer'
-            }}
-          >
-            Reservas por Cliente
-          </button>
-        </div>
 
         {/* Cards container */}
         <div style={{display:'flex', flexDirection:'column', gap:20, maxWidth:900, margin:'0 auto'}}>
@@ -297,6 +302,10 @@ export default function ProximasReservas(){
 
             const deporteName = cancha && cancha.deporte ? (deportesMap[cancha.deporte] || '') : ''
             const canchaNombre = cancha && cancha.nombre ? cancha.nombre : `Cancha ${canchaId || ''}`
+            
+            // Verificar si tiene pago
+            const pago = pagosMap[r.idReserva]
+            const estaPagada = pago && pago.estadoNombre === 'Pagado'
 
             return (
               <article 
@@ -347,8 +356,58 @@ export default function ProximasReservas(){
                     </ul>
                   </div>
 
+                  {/* Estado de Pago */}
+                  {estaPagada ? (
+                    <div style={{
+                      background: '#d1fae5',
+                      color: '#065f46',
+                      padding: '8px 12px',
+                      borderRadius: 6,
+                      fontSize: 14,
+                      fontWeight: 600,
+                      marginBottom: 12,
+                      textAlign: 'center'
+                    }}>
+                      ✅ Reserva Pagada - ${pago.monto.toFixed(2)}
+                    </div>
+                  ) : (
+                    <div style={{
+                      background: '#fef3c7',
+                      color: '#92400e',
+                      padding: '8px 12px',
+                      borderRadius: 6,
+                      fontSize: 14,
+                      fontWeight: 600,
+                      marginBottom: 12,
+                      textAlign: 'center'
+                    }}>
+                      ⚠️ Pago Pendiente - ${r.monto?.toFixed(2) || '0.00'}
+                    </div>
+                  )}
+
                   {/* Buttons */}
-                  <div style={{marginTop:'auto', display:'flex', gap:10}}>
+                  <div style={{marginTop:'auto', display:'flex', gap:10, flexWrap: 'wrap'}}>
+                    {!estaPagada && (
+                      <button 
+                        className="btn"
+                        style={{
+                          background:'#10b981',
+                          color:'#fff',
+                          border:'none',
+                          padding:'8px 16px',
+                          borderRadius:6,
+                          cursor:'pointer',
+                          fontSize:14,
+                          fontWeight:600
+                        }}
+                        onClick={()=>{
+                          setReservaParaPago(r)
+                          setShowPagoModal(true)
+                        }}
+                      >
+                        💳 Pagar Ahora
+                      </button>
+                    )}
                     <button 
                       className="btn"
                       style={{
@@ -469,6 +528,25 @@ export default function ProximasReservas(){
           </div>
         </div>
       )}
+
+      {/* Pago Modal */}
+      <PagoModal 
+        isOpen={showPagoModal}
+        onClose={() => {
+          setShowPagoModal(false)
+          setReservaParaPago(null)
+        }}
+        reserva={reservaParaPago}
+        onPagoCreado={(pago) => {
+          // Actualizar el mapa de pagos
+          setPagosMap(prev => ({
+            ...prev,
+            [pago.idReserva]: pago
+          }))
+          // Recargar datos
+          fetchReservas()
+        }}
+      />
     </div>
   )
 }

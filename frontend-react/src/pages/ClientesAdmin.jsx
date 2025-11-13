@@ -273,6 +273,8 @@ export default function ClientesAdmin(){
               <Link to="/empleados" className="nav-link btn-perfil">Empleados y Usuarios</Link>
               <Link to="/clientes-admin" className="nav-link btn-perfil">Clientes</Link>
               <Link to="/torneos-admin" className="nav-link btn-perfil">Torneos</Link>
+              <Link to="/pagos" className="nav-link btn-perfil">Pagos</Link>
+              <Link to="/reportes" className="nav-link btn-perfil">Reportes</Link>
               <Link to="/perfil" className="nav-link btn-perfil">Mi Perfil</Link>
               <button onClick={handleLogout} className="btn btn-logout">Cerrar Sesión</button>
             </div>

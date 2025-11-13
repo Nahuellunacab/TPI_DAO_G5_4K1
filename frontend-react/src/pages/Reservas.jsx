@@ -269,18 +269,40 @@ export default function Reservas(){
   try{
     // Prefer explicit cancha.descripcion if available
     const descField = cancha && cancha.descripcion ? String(cancha.descripcion).toLowerCase() : ''
+    console.log('Cancha:', cancha?.nombre, 'Descripcion:', descField)
     if (descField && (descField.indexOf('tech') >= 0 || descField.indexOf('techa') >= 0 || descField.indexOf('cubiert') >= 0 || descField.indexOf('cerrad') >= 0)){
       isTechada = true
+      console.log('Cancha detectada como techada por descripcion')
     } else {
       const estadoName = (cancha && cancha.estado) ? (estadosMap[cancha.estado] || '') : ''
       const key = (estadoName + ' ' + (cancha && cancha.nombre ? cancha.nombre : '')).toLowerCase()
-      if (key.indexOf('tech') >= 0 || key.indexOf('techa') >= 0 || key.indexOf('cubiert') >= 0 || key.indexOf('cerrad') >= 0) isTechada = true
+      if (key.indexOf('tech') >= 0 || key.indexOf('techa') >= 0 || key.indexOf('cubiert') >= 0 || key.indexOf('cerrad') >= 0) {
+        isTechada = true
+        console.log('Cancha detectada como techada por estado/nombre')
+      }
     }
   }catch(e){ isTechada = false }
-  // if techada, pre-select iluminación service (if available)
+  
+  // determine if horario is >= 18:00 (requires iluminación)
+  let requiresIluminacion = isTechada // techadas always require iluminación
+  try{
+    const horaStr = typeof horario.horaInicio === 'string' ? horario.horaInicio : ''
+    if (horaStr){
+      const parts = horaStr.split(':')
+      const hora = Number(parts[0]) || 0
+      if (hora >= 18) {
+        requiresIluminacion = true
+        console.log('Horario >= 18:00 detectado, iluminación requerida')
+      }
+    }
+  }catch(e){/* ignore */}
+  
+  console.log('isTechada:', isTechada, 'requiresIluminacion:', requiresIluminacion)
+  
+  // if requiresIluminacion, pre-select iluminación service (if available)
   const initialServices = []
   try{
-    if (isTechada && Array.isArray(servicios)){
+    if (requiresIluminacion && Array.isArray(servicios)){
       for(const s of visibleServices(servicios)){
         try{
           const desc = (s.servicio && s.servicio.descripcion) ? s.servicio.descripcion.toLowerCase() : ''
@@ -289,7 +311,7 @@ export default function Reservas(){
       }
     }
   }catch(e){/* ignore */}
-  setSelectedSlot({ date, fechaReservada, horario, cancha, servicios, cliente, tiposDocumento, isTechada })
+  setSelectedSlot({ date, fechaReservada, horario, cancha, servicios, cliente, tiposDocumento, isTechada, requiresIluminacion })
   setModalSelectedServices(initialServices)
   setShowModal(true)
     }catch(e){
@@ -666,7 +688,7 @@ export default function Reservas(){
                           const sid = Number(s.idCxS)
                           const desc = (s.servicio && s.servicio.descripcion) ? (s.servicio.descripcion || '').toLowerCase() : ''
                           const isIllum = desc.indexOf('ilumin') >= 0 || desc.indexOf('luz') >= 0
-                          const forcedChecked = selectedSlot.isTechada && isIllum
+                          const forcedChecked = selectedSlot.requiresIluminacion && isIllum
                           return (
                           <label key={s.idCxS} style={{display:'block', fontSize:14}}>
                             <input

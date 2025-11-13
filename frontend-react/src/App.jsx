@@ -13,6 +13,7 @@ import Empleados from './pages/Empleados'
 import ClientesAdmin from './pages/ClientesAdmin'
 import TorneosAdmin from './pages/TorneosAdmin'
 import Reportes from './pages/Reportes'
+import Pagos from './pages/Pagos'
 
 export default function App(){
   return (
@@ -30,6 +31,7 @@ export default function App(){
   <Route path="/clientes-admin" element={<ClientesAdmin/>} />
   <Route path="/torneos-admin" element={<TorneosAdmin/>} />
   <Route path="/reportes" element={<Reportes/>} />
+  <Route path="/pagos" element={<Pagos/>} />
     </Routes>
   )
 }

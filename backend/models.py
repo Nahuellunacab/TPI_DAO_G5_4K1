@@ -21,21 +21,18 @@ class TipoDocumento(Base):
 
 class EstadoCancha(Base):
     __tablename__ = "EstadoCancha"
-    idEstado = Column(Integer, primary_key=True, autoincrement=True)
+    idEstado = Column('idEstadoCancha', Integer, primary_key=True, autoincrement=True)
     nombre = Column(String(50), nullable=False, unique=True)
     def __repr__(self):
         return f"<EstadoCancha(idEstado={self.idEstado}, nombre='{self.nombre}')>"
-    # relación hacia Cancha (un estado puede aplicarse a varias canchas)
-    cancha = relationship("Cancha", back_populates="estados")
 
 
 class EstadoReserva(Base):
     __tablename__ = "EstadoReserva"
-    idEstado = Column(Integer, primary_key=True, autoincrement=True)
+    idEstado = Column('idEstadoReserva', Integer, primary_key=True, autoincrement=True)
     nombre = Column(String(50), nullable=False, unique=True)
     def __repr__(self):
         return f"<EstadoReserva(idEstado={self.idEstado}, nombre='{self.nombre}')>"
-    reserva = relationship("Reserva", back_populates="estados")
 
 
 class EstadoTorneo(Base):
@@ -44,16 +41,14 @@ class EstadoTorneo(Base):
     nombre = Column(String(50), nullable=False, unique=True)
     def __repr__(self):
         return f"<EstadoTorneo(idEstadoTorneo={self.idEstadoTorneo}, nombre='{self.nombre}')>"
-    torneo = relationship("Torneo", back_populates="estados")
 
 
 class EstadoPago(Base):
     __tablename__ = "EstadoPago"
-    idEstado = Column(Integer, primary_key=True, autoincrement=True)
+    idEstado = Column('idEstadoPago', Integer, primary_key=True, autoincrement=True)
     nombre = Column(String(50), nullable=False, unique=True)
     def __repr__(self):
         return f"<EstadoPago(idEstado={self.idEstado}, nombre='{self.nombre}')>"
-    pago = relationship("Pago", back_populates="estados")
 
 
 class Cliente(Base):
@@ -95,7 +90,7 @@ class Cancha(Base):
     nombre = Column(String(100), nullable=False)
     deporte = Column(Integer, ForeignKey("Deporte.idDeporte"), nullable=False)
     precioHora = Column(Float, nullable=False)
-    estado = Column(Integer, ForeignKey("EstadoCancha.idEstado"), nullable=False)
+    estado = Column(Integer, nullable=False)
     descripcion = Column(String(200), nullable=True)
     imagen = Column(String(255), nullable=True)
 
@@ -104,7 +99,6 @@ class Cancha(Base):
     # relaciones ORM
     servicios = relationship("CanchaxServicio", back_populates="cancha", cascade="all, delete-orphan")
     torneos = relationship("TorneoxCancha", back_populates="cancha")
-    estados = relationship("EstadoCancha", back_populates="cancha")
 
 
 class Horario(Base):
@@ -161,7 +155,7 @@ class Reserva(Base):
     idReserva = Column(Integer, primary_key=True, autoincrement=True)
     idCliente = Column(Integer, ForeignKey("Cliente.idCliente"), nullable=False)
     fechaReservada = Column(Date, nullable=False)
-    estado = Column(Integer, ForeignKey("EstadoReserva.idEstado"), nullable=False)
+    estado = Column(Integer, nullable=False)
     monto = Column(Float, nullable=False)
     fechaCreacion = Column(DateTime, nullable=False)
 
@@ -170,13 +164,12 @@ class Reserva(Base):
     # Relaciones ORM
     detalles = relationship("DetalleReserva", back_populates="reserva", cascade="all, delete-orphan")
     cliente = relationship("Cliente", back_populates="reservas")
-    estados = relationship("EstadoReserva", back_populates="reserva")
     pago = relationship("Pago", back_populates="reserva", uselist=False, cascade="all, delete-orphan")
 
 
 class MetodoPago(Base):
     __tablename__ = "MetodoPago"
-    idMetodoPago = Column(Integer, primary_key=True, autoincrement=True)
+    idMetodoPago = Column('idMetodo', Integer, primary_key=True, autoincrement=True)
     descripcion = Column(String(50), nullable=False, unique=True)
 
     def __repr__(self):
@@ -187,15 +180,19 @@ class Pago(Base):
     __tablename__ = "Pago"
     idPago = Column(Integer, primary_key=True, autoincrement=True)
     idReserva = Column(Integer, ForeignKey("Reserva.idReserva"), nullable=False)
-    metodoPago = Column(Integer, ForeignKey("MetodoPago.idMetodoPago"), nullable=False)
-    monto = Column(Float, nullable=False)
+    metodoPago = Column('metogoPago', Integer, ForeignKey("MetodoPago.idMetodo"), nullable=False)
+    monto = Column('montoFinal', Float, nullable=False)
     fechaPago = Column(DateTime, nullable=False)
-    estado = Column(Integer, ForeignKey("EstadoPago.idEstado"), nullable=False)
+    estado = Column(Integer, nullable=False)  # Sin FK para evitar conflictos de mapeo
+    comprobante = Column(String(255), nullable=True)  # URL o número de comprobante
+    detalles = Column(String(500), nullable=True)  # Info adicional (JSON string)
+    idEmpleado = Column(Integer, ForeignKey("Empleado.idEmpleado"), nullable=True)  # Empleado que registró el pago
 
     def __repr__(self):
         return f"<Pago(idPago={self.idPago}, idReserva={self.idReserva}, monto={self.monto}, fechaPago={self.fechaPago}, estado='{self.estado}')>"
-    estados = relationship("EstadoPago", back_populates="pago")
+    # Relaciones sin back_populates para evitar conflictos
     reserva = relationship("Reserva", back_populates="pago")
+    empleado = relationship("Empleado")
 
 
 class Equipo(Base):
@@ -215,7 +212,7 @@ class Torneo(Base):
     deporte = Column(Integer, ForeignKey("Deporte.idDeporte"), nullable=False)
     fechaInicio = Column(Date, nullable=False)
     fechaFin = Column(Date, nullable=False)
-    estado = Column(Integer, ForeignKey('EstadoTorneo.idEstadoTorneo'), nullable=False)
+    estado = Column(Integer, nullable=False)
     imagen = Column(String(255), nullable=True)
     maxIntegrantes = Column(Integer, nullable=True, default=5)
     
@@ -223,7 +220,6 @@ class Torneo(Base):
         return f"<Torneo(idTorneo={self.idTorneo}, nombreTorneo='{self.nombreTorneo}', deporte='{self.deporte}', fechaInicio={self.fechaInicio}, fechaFin={self.fechaFin}, estado='{self.estado}')>"
     equipos = relationship("EquipoxCliente", back_populates="torneo")
     cancha = relationship("TorneoxCancha", back_populates="torneo")
-    estados = relationship("EstadoTorneo", back_populates="torneo")
 
 
 class TorneoxCancha(Base):

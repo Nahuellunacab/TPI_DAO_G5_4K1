@@ -94,10 +94,18 @@ export default function SportDetail(){
   // Label mapping for overlays: intenta detectar por nombre de cancha o descripción
   function getCoverLabel(cancha) {
     try {
-      const nombre = (cancha.nombre || '').toLowerCase()
-      const desc = (cancha.descripcion || '').toLowerCase()
+      // Primero intentar usar directamente la descripción de la base de datos
+      const desc = (cancha.descripcion || '').trim().toLowerCase()
       
-      // Casos especiales primero
+      // Si la descripción es exactamente "techada" o "sin techar", usarla directamente
+      if (desc === 'techada' || desc === 'sin techar' || desc === 'playero') {
+        return desc
+      }
+      
+      // Si no, buscar palabras clave en descripción y nombre
+      const nombre = (cancha.nombre || '').toLowerCase()
+      
+      // Casos especiales
       if (nombre.includes('playero') || desc.includes('playero') || nombre.includes('playa')) {
         return 'playero'
       }

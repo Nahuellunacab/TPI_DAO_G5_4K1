@@ -672,11 +672,13 @@ export default function TorneosAdmin(){
                   <Link to="/empleados" className="nav-link btn-perfil">Empleados y Usuarios</Link>
                   <Link to="/clientes-admin" className="nav-link btn-perfil">Clientes</Link>
                   <Link to="/torneos-admin" className="nav-link btn-perfil">Torneos</Link>
+                  <Link to="/pagos" className="nav-link btn-perfil">Pagos</Link>
+                  <Link to="/reportes" className="nav-link btn-perfil">Reportes</Link>
                 </>
               )}
               {!isSupervisor && (
                 <>
-                  <Link to="/dashboard" className="nav-link btn-reservas">Reservas</Link>
+                  <Link to="/dashboard" className="nav-link btn-reservas">Reservar</Link>
                   <Link to="/torneos-admin" className="nav-link btn-perfil">Torneos</Link>
                   <Link to="/mis-reservas" className="nav-link btn-calendar">Mis Reservas</Link>
                 </>
