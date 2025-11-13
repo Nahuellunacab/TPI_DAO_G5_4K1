@@ -244,6 +244,8 @@ class ServicioReservas:
 
             num_turnos = len(horarios_to_book)
             monto_total = float(cancha.precioHora or 0.0) * num_turnos
+            # Services that should be charged only once per reservation (not per turno)
+            SINGLETON_SERVICIOS = {6, 8}
 
             extras = []
             try:
@@ -288,13 +290,23 @@ class ServicioReservas:
             except Exception:
                 pass
 
+            # Some services (e.g. iluminación vs. others) may be one-time fees per reserva
+            seen_singletons = set()
             for s_id in servicios_selected:
                 s_id_int = int(s_id)
                 if s_id_int == cvs_base.idCxS:
                     continue
                 cxs = valid_cxs.get(s_id_int)
                 if cxs:
-                    monto_total += float(cxs.precioAdicional or 0.0) * num_turnos
+                    precio = float(cxs.precioAdicional or 0.0)
+                    if s_id_int in SINGLETON_SERVICIOS:
+                        # Charge only once per reservation
+                        if s_id_int not in seen_singletons:
+                            monto_total += precio
+                            seen_singletons.add(s_id_int)
+                    else:
+                        # Charge per turno
+                        monto_total += precio * num_turnos
                     extras.append(cxs)
 
             # Debug: mostrar qué servicios fueron finalmente seleccionados y los extras

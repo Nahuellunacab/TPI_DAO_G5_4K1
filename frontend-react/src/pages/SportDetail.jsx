@@ -12,14 +12,15 @@ const SPORT_DATA = {
   basquet: { title: 'Basquet', imgs: ['/assets/basquet.jpeg','/assets/basquetCerrado.jpeg'] }
 }
 
-// Mapping to match DB naming convention: left image -> code[0] (f1), right -> code[1] (f2)
+// Mapping to match DB naming convention: left image -> code[0] (F1), right -> code[1] (F2)
+// We'll include uppercase variants when building candidates.
 const CANCHA_CODE_MAP = {
-  futbol: ['f1', 'f2'],
-  tenis: ['t1', 't2'],
-  padel: ['p1', 'p2'],
-  hockey: ['h1', 'h2'],
-  volley: ['v1', 'v2'],
-  basquet: ['b1', 'b2'],
+  futbol: ['F1', 'F2'],
+  tenis: ['T1', 'T2'],
+  padel: ['P1', 'P2'],
+  hockey: ['H1', 'H2'],
+  volley: ['V1', 'V2'],
+  basquet: ['B1', 'B2']
 }
 
 export default function SportDetail(){
@@ -27,6 +28,7 @@ export default function SportDetail(){
   const navigate = useNavigate()
   const data = SPORT_DATA[slug]
   const [canchas, setCanchas] = useState([])
+  const [estadosMap, setEstadosMap] = useState({})
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -36,6 +38,16 @@ export default function SportDetail(){
         if (!res.ok) throw new Error('No se pudo obtener canchas')
         const rows = await res.json()
         setCanchas(rows)
+        // try to build estados map if the response contains estado names
+        try{
+          const eRes = await fetch('/api/estado-canchas')
+          if (eRes.ok){
+            const er = await eRes.json()
+            const emap = {}
+            for(const ee of er) emap[String(ee.idEstado || ee.idEstadoCancha || ee.id || ee.idestado)] = ee.nombre || ee.name
+            setEstadosMap(emap)
+          }
+        }catch(e){/* ignore */}
       } catch (e) {
         console.error(e)
       } finally {
@@ -51,6 +63,19 @@ export default function SportDetail(){
     const code = codes[index] || codes[0] || null
     if (!code) return null
     return canchas.find(c => c.nombre && c.nombre.toString().toLowerCase() === code.toLowerCase()) || null
+  }
+
+  // Helper: determine whether a cancha is in maintenance
+  function isInMaintenance(c) {
+    try{
+      if (!c) return false
+      // numeric state check (common from API)
+      if (c.estado === 2 || String(c.estado) === '2') return true
+      // name-based check using provided estadoNombre or map
+      const name = c.estadoNombre || estadosMap[String(c.estado)] || ''
+      if (name && String(name).toLowerCase().indexOf('mantenimiento') >= 0) return true
+    }catch(e){ /* ignore */ }
+    return false
   }
 
   const canchaLeft = canchas.length ? findCanchaForSlugIndex(slug, 0) : null
@@ -87,6 +112,12 @@ export default function SportDetail(){
       }
     }catch(e){/* ignore */}
     if (imgs[fallbackIndex]) list.push(imgs[fallbackIndex])
+    // Also try canonical code-based asset names for the sport (e.g. t1, t2, f1)
+    try{
+      const codes = CANCHA_CODE_MAP[slug] || []
+      const code = codes[fallbackIndex]
+      if (code){ list.unshift(`/assets/${code}.jpg`, `/assets/${code}.jpeg`, `/assets/${code}.png`) }
+    }catch(e){}
     list.push('/assets/placeholder.jpg')
     return list
   }
@@ -97,7 +128,7 @@ export default function SportDetail(){
         <div className="container header-inner">
           <img src="/assets/logo.png" alt="logo" className="logo" />
           <div className="header-actions">
-            <Link to="/reservas" className="nav-link btn-reservas">Mis Reservas</Link>
+            <Link to="/mis-reservas" className="nav-link btn-reservas">Mis Reservas</Link>
             <Link to="/perfil" className="nav-link btn-perfil">Mi Perfil</Link>
           </div>
         </div>
@@ -107,15 +138,20 @@ export default function SportDetail(){
         <h1 className="sport-title">{data.title}</h1>
 
         <div className="sport-gallery">
-          {data.title.toLowerCase() === 'hockey' ? (
+                  {data.title.toLowerCase() === 'hockey' ? (
             <div className="single-photo">
-              <SmartImage candidates={candidatesForCanchaAsset(canchaLeft, 0)} alt={data.title} style={{width:'100%', height:360, objectFit:'cover'}} />
+              <SmartImage candidates={candidatesForCanchaAsset(canchaLeft, 0)} alt={data.title} className="thumb-centered" />
               <div className="media-overlay">
                 <div className="overlay-content">
                   <h4 className="overlay-title">{getCoverLabel(slug, 0)}</h4>
                   <p className="overlay-price">{canchaLeft ? `${canchaLeft.precioHora} por turno` : 'Precio no disponible'}</p>
                   <div className="overlay-actions">
-                    <Link to={canchaLeft && canchaLeft.idCancha ? `/reservas?idCancha=${canchaLeft.idCancha}` : '/reservas'} className="btn btn-reserve">Reservar</Link>
+                      {(() => {
+                          try{
+                            if (isInMaintenance(canchaLeft)) return (<div style={{color:'#fff'}}>En mantenimiento</div>)
+                          }catch(e){}
+                          return (<Link to={canchaLeft && canchaLeft.idCancha ? `/reservas?idCancha=${canchaLeft.idCancha}` : '/reservas'} className="btn btn-reserve">Reservar</Link>)
+                        })()}
                   </div>
                 </div>
               </div>
@@ -123,26 +159,37 @@ export default function SportDetail(){
           ) : (
             <>
               <div className="photo-col">
-                <SmartImage candidates={candidatesForCanchaAsset(canchaLeft, 0)} alt={data.title} style={{width:'100%', height:220, objectFit:'cover'}} />
+                <SmartImage candidates={candidatesForCanchaAsset(canchaLeft, 0)} alt={data.title} className="thumb-centered" />
                 <div className="media-overlay">
                   <div className="overlay-content">
                     <h4 className="overlay-title">{getCoverLabel(slug, 0)}</h4>
                     <p className="overlay-price">{canchaLeft ? `${canchaLeft.precioHora} por turno` : 'Precio no disponible'}</p>
                     <div className="overlay-actions">
-                      <Link to={canchaLeft && canchaLeft.idCancha ? `/reservas?idCancha=${canchaLeft.idCancha}` : '/reservas'} className="btn btn-reserve">Reservar</Link>
+                      {(() => {
+                        try{
+                          if (isInMaintenance(canchaLeft)) return (<div style={{color:'#fff'}}>En mantenimiento</div>)
+                        }catch(e){}
+                        return (<Link to={canchaLeft && canchaLeft.idCancha ? `/reservas?idCancha=${canchaLeft.idCancha}` : '/reservas'} className="btn btn-reserve">Reservar</Link>)
+                      })()}
                     </div>
                   </div>
                 </div>
               </div>
 
               <div className="photo-col">
-                <SmartImage candidates={candidatesForCanchaAsset(canchaRight, 1)} alt={data.title + ' 2'} style={{width:'100%', height:220, objectFit:'cover'}} />
+                <SmartImage candidates={candidatesForCanchaAsset(canchaRight, 1)} alt={data.title + ' 2'} className="thumb-centered" />
                 <div className="media-overlay">
                   <div className="overlay-content">
                     <h4 className="overlay-title">{getCoverLabel(slug, 1)}</h4>
                     <p className="overlay-price">{canchaRight ? `${canchaRight.precioHora} por turno` : 'Precio no disponible'}</p>
                     <div className="overlay-actions">
-                      <Link to={canchaRight && canchaRight.idCancha ? `/reservas?idCancha=${canchaRight.idCancha}` : '/reservas'} className="btn btn-reserve">Reservar</Link>
+                      {(() => {
+                        try{
+                          const estadoKey = canchaRight && (canchaRight.estadoNombre || canchaRight.estado) ? String(canchaRight.estadoNombre ? (canchaRight.estadoNombre) : (estadosMap[String(canchaRight.estado)] || canchaRight.estado)).toLowerCase() : ''
+                          if (estadoKey && estadoKey.indexOf('en mantenimiento') >= 0) return (<div style={{color:'#fff'}}>En mantenimiento</div>)
+                        }catch(e){}
+                        return (<Link to={canchaRight && canchaRight.idCancha ? `/reservas?idCancha=${canchaRight.idCancha}` : '/reservas'} className="btn btn-reserve">Reservar</Link>)
+                      })()}
                     </div>
                   </div>
                 </div>

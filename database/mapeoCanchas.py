@@ -37,6 +37,31 @@ def ensure_cancha_descripcion_column():
     return False
 
 
+def ensure_cancha_imagen_column():
+    """Comprueba si la columna 'imagen' existe en la tabla Cancha y la crea si falta.
+    Se usa para añadir una columna ligera sin requerir alembic.
+    """
+    insp = inspect(engine)
+    if 'Cancha' in insp.get_table_names():
+        cols = [c['name'] for c in insp.get_columns('Cancha')]
+        if 'imagen' not in cols:
+            try:
+                with engine.connect() as conn:
+                    trans = conn.begin()
+                    conn.execute(text('ALTER TABLE Cancha ADD COLUMN imagen TEXT'))
+                    # no se establece valor por defecto; dejar NULL cuando no haya imagen
+                    trans.commit()
+                    print("Columna 'imagen' añadida a la tabla 'Cancha'.")
+                    return True
+            except Exception as e:
+                print(f"Error al añadir la columna 'imagen': {e}")
+                try:
+                    trans.rollback()
+                except Exception:
+                    pass
+    return False
+
+
 def seed_minimal_demo():
     """Inserta filas mínimas para demostrar las relaciones, solo si la base de datos está vacía."""
     session = SessionLocal()

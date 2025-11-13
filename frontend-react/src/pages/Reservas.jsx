@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import { parseLocalDate, toYMD } from '../utils/dateUtils'
 import { useLocation, Link, useNavigate } from 'react-router-dom'
 
 function useQuery() {
@@ -113,11 +114,11 @@ export default function Reservas(){
 
   async function loadEventsForWeek(startDate){
     if (!idCancha) return
-    const end = new Date(startDate)
-    end.setDate(startDate.getDate() + 6)
-    const qs = new URLSearchParams()
-    qs.set('start', startDate.toISOString().slice(0,10))
-    qs.set('end', end.toISOString().slice(0,10))
+  const end = new Date(startDate)
+  end.setDate(startDate.getDate() + 6)
+  const qs = new URLSearchParams()
+  qs.set('start', toYMD(startDate))
+  qs.set('end', toYMD(end))
     try{
       const res = await fetch(`/api/canchas/${idCancha}/reservas?${qs.toString()}`)
       if (!res.ok) throw new Error('no events')
@@ -133,7 +134,7 @@ export default function Reservas(){
 
   function isOccupied(date, horario){
     // Determine occupancy by matching idHorario and fechaReservada
-    const dateStr = date.toISOString().slice(0,10)
+  const dateStr = toYMD(date)
     for(const ev of events){
       if (!ev) continue
       if ((ev.idHorario === null || ev.idHorario === undefined)) continue
@@ -179,10 +180,10 @@ export default function Reservas(){
 
   function isSuggested(date, horario){
     if (!suggestions || suggestions.length === 0) return -1
-    const dateStr = date.toISOString().slice(0,10)
+  const dateStr = toYMD(date)
     for(let i=0;i<suggestions.length;i++){
       const s = suggestions[i]
-      const sDate = (new Date(s.startDate)).toISOString().slice(0,10)
+    const sDate = toYMD(parseLocalDate(s.startDate))
       if (sDate !== dateStr) continue
       for(const h of s.horarios){ if (Number(h.idHorario) === Number(horario.idHorario)) return i }
     }
@@ -196,8 +197,8 @@ export default function Reservas(){
 
   function isSelected(date, horario){
     if (!selectedBlock) return false
-    const dateStr = date.toISOString().slice(0,10)
-    const sDate = (new Date(selectedBlock.startDate)).toISOString().slice(0,10)
+  const dateStr = toYMD(date)
+  const sDate = toYMD(parseLocalDate(selectedBlock.startDate))
     if (sDate !== dateStr) return false
     return selectedBlock.horarios.some(h => Number(h.idHorario) === Number(horario.idHorario))
   }
@@ -213,7 +214,7 @@ export default function Reservas(){
   // Build a block starting from the clicked horario and going downwards for n turnos
   function buildBlockFromStart(date, horario, n){
     if (!horarios || horarios.length === 0) return null
-    const dateStr = date.toISOString().slice(0,10)
+  const dateStr = toYMD(date)
     // find index of horario in horarios array
     const idx = horarios.findIndex(h => Number(h.idHorario) === Number(horario.idHorario))
     if (idx === -1) return null
@@ -242,7 +243,7 @@ export default function Reservas(){
   async function handleReserve(date, horario){
     // Open reservation modal with prefilled data instead of prompt/confirm
     if (!idCancha) { alert('No hay cancha seleccionada'); return }
-    const fechaReservada = date.toISOString().slice(0,10)
+  const fechaReservada = toYMD(date)
     // Preload cancha and servicios for the modal
     try{
       const [cRes, sRes] = await Promise.all([
@@ -387,7 +388,7 @@ export default function Reservas(){
       const clientId = raw && raw.idCliente ? raw.idCliente : null
       if (!clientId){ setBlockError('Debes iniciar sesión para reservar'); setBlockSubmitting(false); return }
 
-      const fechaReservada = (new Date(block.startDate)).toISOString().slice(0,10)
+  const fechaReservada = toYMD(parseLocalDate(block.startDate))
       for(const h of block.horarios){
         const payload = { idCancha, idHorario: h.idHorario, fechaReservada, idCliente: clientId }
         const res = await fetch('/api/reservas', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) })
@@ -433,19 +434,26 @@ export default function Reservas(){
     const servicios = Array.isArray(selectedSlot.servicios) ? selectedSlot.servicios : []
     const visible = visibleServices(servicios)
     const base = Number(selectedSlot.cancha && selectedSlot.cancha.precioHora ? selectedSlot.cancha.precioHora : 0)
-    let extras = 0
+  // Some services are one-time fees per reservation (e.g. bar/kiosco, comida post-partido).
+  // NOTE: iluminación should be charged per turno, so we don't include 'ilumin'/'luz' here.
+  const singletonKeywords = ['bar', 'kiosc', 'kiosko', 'comida', 'post']
+    let extrasPerTurn = 0
+    let extrasSingleton = 0
     for(const s of visible){
       const sid = Number(s.idCxS)
       const desc = (s.servicio && s.servicio.descripcion) ? (s.servicio.descripcion||'').toLowerCase() : ''
       const isIllum = desc.indexOf('ilumin') >= 0 || desc.indexOf('luz') >= 0
       const forcedChecked = selectedSlot.isTechada && isIllum
-      if (forcedChecked || modalSelectedServices.includes(sid) || modalSelectedServices.includes(String(sid)) ){
-        extras += Number(s.precioAdicional || 0)
-      }
+      const selected = forcedChecked || modalSelectedServices.includes(sid) || modalSelectedServices.includes(String(sid))
+      if (!selected) continue
+      const precio = Number(s.precioAdicional || 0)
+      // Decide if this service should be charged once or per turno by keyword
+      const isSingleton = singletonKeywords.some(k => desc.indexOf(k) >= 0)
+      if (isSingleton) extrasSingleton += precio
+      else extrasPerTurn += precio
     }
-    // If the modal is for a block of horarios, multiply by the number of turns
     const count = selectedSlot.blockHorarios && selectedSlot.blockHorarios.length ? selectedSlot.blockHorarios.length : 1
-    return (base + extras) * count
+    return (base * count) + (extrasPerTurn * count) + extrasSingleton
   }
 
   async function openBlockReservationModal(){
@@ -471,8 +479,8 @@ export default function Reservas(){
         }
       }catch(e){ console.warn('No se pudo obtener cliente desde API', e) }
 
-      const fechaReservada = (new Date(block.startDate)).toISOString().slice(0,10)
-      setSelectedSlot({ date: new Date(block.startDate), fechaReservada, horario: block.horarios[0], cancha, servicios, cliente, tiposDocumento, blockHorarios: block.horarios })
+  const fechaReservada = toYMD(parseLocalDate(block.startDate))
+  setSelectedSlot({ date: parseLocalDate(block.startDate), fechaReservada, horario: block.horarios[0], cancha, servicios, cliente, tiposDocumento, blockHorarios: block.horarios })
       // determine techada and pre-select iluminación if needed
       let isTechadaBlk = false
       try{
@@ -644,7 +652,7 @@ export default function Reservas(){
                   <p style={{margin:0}}><strong>Cancha:</strong> {selectedSlot && selectedSlot.cancha && selectedSlot.cancha.nombre ? selectedSlot.cancha.nombre : `#${idCancha}`}</p>
                   <p style={{margin:0}}><strong>Fecha:</strong> {(() => {
                       try{
-                        const d = new Date(selectedSlot.fechaReservada + 'T00:00:00')
+                        const d = parseLocalDate(selectedSlot.fechaReservada)
                         return d.toLocaleDateString('es-AR', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })
                       }catch(e){ return selectedSlot.fechaReservada }
                   })()}</p>

@@ -2,6 +2,9 @@ import React, { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import SmartImage from '../components/SmartImage'
 import CanchaModal from '../components/CanchaModal'
+import ConfirmModal from '../components/ConfirmModal'
+import Notify from '../components/Notify'
+import NewCanchaModalNice from '../components/NewCanchaModalNice'
 
 const SPORT_IMAGES = {
   futbol: '/assets/futbol.jpg',
@@ -12,12 +15,25 @@ const SPORT_IMAGES = {
   basquet: '/assets/basquet.jpeg'
 }
 
+// code-based asset names (in case assets were renamed to codes like t1,t2,f1...)
+const CODE_MAP = {
+  futbol: ['f1','f2'],
+  tenis: ['t1','t2'],
+  padel: ['p1','p2'],
+  hockey: ['h1','h2'],
+  volley: ['v1','v2'],
+  basquet: ['b1','b2']
+}
+
 export default function Canchas(){
   const [canchas, setCanchas] = useState([])
   const [deportesMap, setDeportesMap] = useState({})
   const [loading, setLoading] = useState(true)
   const [hoveredId, setHoveredId] = useState(null)
   const [activeCanchaId, setActiveCanchaId] = useState(null)
+  const [confirmTarget, setConfirmTarget] = useState(null)
+  const [notify, setNotify] = useState(null)
+  const [showNewCancha, setShowNewCancha] = useState(false)
   const nav = useNavigate()
 
   useEffect(()=>{
@@ -27,14 +43,14 @@ export default function Canchas(){
           fetch('/api/canchas'),
           fetch('/api/deportes')
         ])
-        if (!cRes.ok) throw new Error('No se pudieron obtener canchas')
-        if (!dRes.ok) throw new Error('No se pudieron obtener deportes')
-        const rows = await cRes.json()
-        const deportes = await dRes.json()
-        const map = {}
-        for(const d of deportes) map[String(d.idDeporte)] = d.nombre
-        setDeportesMap(map)
-        setCanchas(rows)
+    if (!cRes.ok) throw new Error('No se pudieron obtener canchas')
+    if (!dRes.ok) throw new Error('No se pudieron obtener deportes')
+    const rows = await cRes.json()
+    const deportes = await dRes.json()
+    const map = {}
+    for(const d of deportes) map[String(d.idDeporte)] = d.nombre
+    setDeportesMap(map)
+    setCanchas(rows)
       }catch(e){
         console.error('load canchas', e)
         setCanchas([])
@@ -45,6 +61,10 @@ export default function Canchas(){
 
   function imageCandidatesForCancha(c){
     const list = []
+      // Prefer the backend-served image endpoint for this cancha (will resolve uploads/assets/remote)
+      try{ if (c && c.idCancha) list.push(`/api/canchas/${c.idCancha}/imagen`) }catch(e){}
+      // If the cancha record has an explicit imagen string, keep it as a candidate too
+      try{ if (c && c.imagen) list.push(c.imagen) }catch(e){}
     try{
       const raw = String(c.nombre || '').trim()
       if (raw){
@@ -58,11 +78,23 @@ export default function Canchas(){
     try{
       const nombreDeporte = deportesMap[String(c.deporte)] || ''
       const key = String(nombreDeporte).toLowerCase()
+      // try code-based asset names for known deportes
+      const normalized = key.normalize('NFD').replace(/[^\w\s-]/g,'')
+      if (normalized && CODE_MAP[normalized]){
+        const codes = CODE_MAP[normalized]
+        for(const code of codes){
+          list.push(`/assets/${code}.jpg`, `/assets/${code}.jpeg`, `/assets/${code}.png`)
+          // also try uppercase variant (assets folder may use uppercase filenames)
+          const up = String(code).toUpperCase()
+          if (up !== code) list.push(`/assets/${up}.jpg`, `/assets/${up}.jpeg`, `/assets/${up}.png`)
+        }
+      }
       if (key && SPORT_IMAGES[key]) list.push(SPORT_IMAGES[key])
     }catch(e){/* ignore */}
     // final fallback(s)
     list.push('/assets/placeholder.jpg')
-    return list
+    // remove duplicates while preserving order
+    return Array.from(new Set(list))
   }
 
   return (
@@ -72,7 +104,7 @@ export default function Canchas(){
           <img src="/assets/logo.png" alt="logo" className="logo" />
           <nav className="nav">
             <div className="header-actions">
-              <Link to="/canchas" className="nav-link">Canchas</Link>
+              <Link to="/dashboard" className="nav-link">Calendario</Link>
               <Link to="/mis-reservas" className="nav-link btn-reservas">Próximas Reservas</Link>
               <Link to="/perfil" className="nav-link btn-perfil">Mi Perfil</Link>
             </div>
@@ -95,7 +127,7 @@ export default function Canchas(){
                 style={{overflow:'hidden'}}
               >
                 <div className="sport-media" style={{position:'relative'}}>
-                  <SmartImage candidates={imageCandidatesForCancha(c)} alt={c.nombre} style={{width:'100%', height:240, objectFit:'cover', display:'block'}} />
+                  <SmartImage candidates={imageCandidatesForCancha(c)} alt={c.nombre} className="thumb-centered" />
 
                   {/* overlay that darkens on hover and shows action buttons */}
                   <div
@@ -116,20 +148,11 @@ export default function Canchas(){
                         <button className="btn btn-reserve" onClick={() => setActiveCanchaId(c.idCancha)} style={{background:'#fff', color:'#333'}}>Ver detalles</button>
                         <button
                           className="btn btn-outline"
-                          style={{background:'#c0392b', color:'#fff', border:'none', padding:'8px 12px', borderRadius:6, cursor:'pointer'}}
+                          style={{background: c.estado === 2 ? '#2ecc71' : '#c0392b', color:'#fff', border:'none', padding:'8px 12px', borderRadius:6, cursor:'pointer'}}
                           onMouseEnter={e => e.currentTarget.style.filter = 'brightness(0.95)'}
                           onMouseLeave={e => e.currentTarget.style.filter = 'none'}
-                          onClick={async ()=>{
-                            if(!confirm(`Confirmar inhabilitar la cancha ${c.nombre}?`)) return
-                            try{
-                              const r = await fetch(`/api/canchas/${c.idCancha}`, {method:'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify({estado: 2})})
-                              if (!r.ok) throw new Error('Error al inhabilitar')
-                              // optimistic update
-                              setCanchas(prev => prev.map(x => x.idCancha === c.idCancha ? {...x, estado: 2} : x))
-                              alert('Cancha inhabilitada')
-                            }catch(e){ console.error(e); alert('No se pudo inhabilitar la cancha') }
-                          }}
-                        >Inhabilitar</button>
+                          onClick={()=> setConfirmTarget({ id: c.idCancha, nombre: c.nombre, action: c.estado === 2 ? 'enable' : 'disable' }) }
+                        >{c.estado === 2 ? 'Habilitar' : 'Inhabilitar'}</button>
                       </div>
                     )}
                   </div>
@@ -142,11 +165,46 @@ export default function Canchas(){
                 </div>
               </article>
             ))}
+            {/* Add-card: frame to create a new cancha (placed inside the same grid so it matches thumbnails) */}
+            <article className="sport-card" style={{display:'flex',flexDirection:'column',cursor:'pointer'}} onClick={()=>setShowNewCancha(true)}>
+              <div className="sport-media add-card-frame" style={{position:'relative'}}>
+                <div style={{textAlign:'center', color:'#666'}}>
+                  <div className="plus">＋</div>
+                </div>
+              </div>
+              <div className="sport-body" style={{padding:'8px 12px', textAlign:'center'}}>
+                <h3 style={{margin:0, fontSize:16}}>Agregar cancha</h3>
+              </div>
+            </article>
           </div>
         )}
         {activeCanchaId && (
           <CanchaModal idCancha={activeCanchaId} onClose={() => setActiveCanchaId(null)} />
         )}
+        {showNewCancha && (
+          <NewCanchaModalNice open={showNewCancha} onClose={()=>setShowNewCancha(false)} onCreated={(c)=>{ setCanchas(prev=>[c,...prev]); setNotify({type:'success', title:'Cancha creada', message:`La cancha "${c.nombre}" fue creada.`}) }} />
+        )}
+        <ConfirmModal
+          open={!!confirmTarget}
+          title={confirmTarget && confirmTarget.action === 'enable' ? 'Habilitar cancha' : 'Inhabilitar cancha'}
+          message={confirmTarget ? (confirmTarget.action === 'enable' ? `¿Confirma habilitar la cancha "${confirmTarget.nombre}"? Esto cambiará su estado a "activa".` : `¿Confirma inhabilitar la cancha "${confirmTarget.nombre}"? Esto cambiará su estado a "en mantenimiento".`) : ''}
+          confirmText={confirmTarget && confirmTarget.action === 'enable' ? 'Habilitar' : 'Inhabilitar'}
+          cancelText="Cancelar"
+          onCancel={() => setConfirmTarget(null)}
+          onConfirm={async ()=>{
+            if (!confirmTarget) return
+            const id = confirmTarget.id
+            const newEstado = confirmTarget.action === 'enable' ? 1 : 2
+            try{
+              const r = await fetch(`/api/canchas/${id}`, {method:'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify({estado: newEstado})})
+              if (!r.ok) throw new Error('Error al cambiar estado')
+              setCanchas(prev => prev.map(x => x.idCancha === id ? {...x, estado: newEstado} : x))
+              setConfirmTarget(null)
+              setNotify({ type:'success', title: newEstado === 2 ? 'Cancha inhabilitada' : 'Cancha habilitada', message:`La cancha "${confirmTarget.nombre}" fue actualizada.` })
+            }catch(e){ console.error(e); setNotify({ type:'error', title:'Error', message:'No se pudo cambiar el estado de la cancha' }); setConfirmTarget(null) }
+          }}
+        />
+        <Notify open={!!notify} type={notify?.type} title={notify?.title} message={notify?.message} onClose={() => setNotify(null)} />
       </main>
     </div>
   )

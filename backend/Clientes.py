@@ -103,6 +103,17 @@ def get_reservas_cliente(idCliente: int):
         out = []
         for r in reservas:
             rdict = _to_dict(r)
+            # normalize fechaReservada to YYYY-MM-DD string for consistent frontend parsing
+            try:
+                fr = rdict.get('fechaReservada')
+                if fr is not None and hasattr(fr, 'isoformat'):
+                    rdict['fechaReservada'] = fr.isoformat()
+                else:
+                    # if it's already a string, try to truncate to date part
+                    if isinstance(fr, str) and len(fr) >= 10:
+                        rdict['fechaReservada'] = fr[:10]
+            except Exception:
+                pass
             # obtener detalles asociados a esta reserva
             detalles = (
                 session.query(DetalleReserva, CanchaxServicio, Horario)

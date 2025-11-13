@@ -1,6 +1,9 @@
 from flask import Blueprint, request, jsonify
 from sqlalchemy import text
+from sqlalchemy.exc import OperationalError
+import traceback
 from datetime import datetime, date
+from time import sleep
 from database.mapeoCanchas import SessionLocal, Reserva, EstadoReserva
 from basicas import _to_dict
 
@@ -30,9 +33,24 @@ def create_reserva():
         session.add(obj)
         session.commit()
         session.refresh(obj)
-        return jsonify(_to_dict(obj)), 201
+        d = _to_dict(obj)
+        try:
+            fr = d.get('fechaReservada')
+            if fr is not None and hasattr(fr, 'isoformat'):
+                d['fechaReservada'] = fr.isoformat()
+            else:
+                if isinstance(fr, str) and len(fr) >= 10:
+                    d['fechaReservada'] = fr[:10]
+        except Exception:
+            pass
+        return jsonify(d), 201
     except Exception as e:
-        session.rollback()
+        try:
+            session.rollback()
+        except Exception:
+            pass
+        # Print full traceback to server log to help debug 500 errors
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
     finally:
         session.close()
@@ -43,7 +61,20 @@ def list_reservas():
     session = SessionLocal()
     try:
         rows = session.query(Reserva).all()
-        return jsonify([_to_dict(r) for r in rows])
+        out = []
+        for r in rows:
+            d = _to_dict(r)
+            try:
+                fr = d.get('fechaReservada')
+                if fr is not None and hasattr(fr, 'isoformat'):
+                    d['fechaReservada'] = fr.isoformat()
+                else:
+                    if isinstance(fr, str) and len(fr) >= 10:
+                        d['fechaReservada'] = fr[:10]
+            except Exception:
+                pass
+            out.append(d)
+        return jsonify(out)
     finally:
         session.close()
 
@@ -65,7 +96,17 @@ def get_reserva(id):
         obj = session.get(Reserva, id)
         if not obj:
             return jsonify({'error': 'Not found'}), 404
-        return jsonify(_to_dict(obj))
+        d = _to_dict(obj)
+        try:
+            fr = d.get('fechaReservada')
+            if fr is not None and hasattr(fr, 'isoformat'):
+                d['fechaReservada'] = fr.isoformat()
+            else:
+                if isinstance(fr, str) and len(fr) >= 10:
+                    d['fechaReservada'] = fr[:10]
+        except Exception:
+            pass
+        return jsonify(d)
     finally:
         session.close()
 
@@ -95,7 +136,24 @@ def update_reserva(id):
                         continue
                 # fallback for other fields
                 setattr(obj, k, v)
-        session.commit()
+        # commit with retry on SQLITE 'database is locked' errors
+        attempts = 0
+        while True:
+            try:
+                session.commit()
+                break
+            except OperationalError as oe:
+                msg = str(oe).lower()
+                if 'database is locked' in msg and attempts < 4:
+                    attempts += 1
+                    sleep(0.12 * attempts)  # small backoff
+                    continue
+                # otherwise fail
+                try:
+                    session.rollback()
+                except Exception:
+                    pass
+                return jsonify({'error': str(oe)}), 500
         return jsonify({'success': True})
     except Exception as e:
         session.rollback()

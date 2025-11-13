@@ -96,6 +96,7 @@ class Cancha(Base):
     precioHora = Column(Float, nullable=False)
     estado = Column(Integer, ForeignKey("EstadoCancha.idEstado"), nullable=False)
     descripcion = Column(String(200), nullable=True)
+    imagen = Column(String(255), nullable=True)
 
     def __repr__(self):
         return f"<Cancha(idCancha={self.idCancha}, nombre='{self.nombre}', deporte='{self.deporte}', precioHora={self.precioHora}, estado='{self.estado}')>"

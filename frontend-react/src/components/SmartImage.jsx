@@ -1,17 +1,35 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 
 export default function SmartImage({ candidates = [], alt = '', className, style }){
-  const [idx, setIdx] = useState(0)
+  const [src, setSrc] = useState(null)
   const placeholder = '/assets/placeholder.jpg'
-  const src = (Array.isArray(candidates) && idx < candidates.length) ? candidates[idx] : placeholder
 
-  function handleError(){
-    // advance to the next candidate, or to placeholder when exhausted
-    if (idx + 1 < candidates.length) setIdx(idx + 1)
-    else setIdx(candidates.length) // will cause placeholder to be used
-  }
+  useEffect(()=>{
+    let cancelled = false
+    async function tryLoad(){
+      if (!Array.isArray(candidates) || candidates.length === 0){
+        setSrc(placeholder); return
+      }
+      for(const c of candidates){
+        try{
+          if (typeof c !== 'string') continue
+          await new Promise((resolve, reject) => {
+            const img = new Image()
+            img.onload = () => resolve(true)
+            img.onerror = () => reject(new Error('load error'))
+            img.src = c
+          })
+          if (!cancelled){ setSrc(c); return }
+        }catch(e){ /* try next */ }
+      }
+      if (!cancelled) setSrc(placeholder)
+    }
+    tryLoad()
+    return ()=>{ cancelled = true }
+  }, [JSON.stringify(candidates)])
 
+  const finalSrc = src || placeholder
   return (
-    <img src={src} alt={alt} className={className} style={style} onError={handleError} />
+    <img src={finalSrc} alt={alt} className={className} style={style} />
   )
 }

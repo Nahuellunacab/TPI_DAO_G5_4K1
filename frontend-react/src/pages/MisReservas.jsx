@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import SmartImage from '../components/SmartImage'
+import { parseLocalDate, toYMD } from '../utils/dateUtils'
 
 export default function MisReservas(){
   const navigate = useNavigate()
@@ -70,7 +72,7 @@ export default function MisReservas(){
           setDeportesMap(deportesMap)
         }catch(e){}
 
-        const map = {}
+  const map = {}
         await Promise.all(Array.from(canchaIds).map(async id => {
           try{
             const cRes = await fetch(`/api/canchas/${id}`)
@@ -108,6 +110,48 @@ export default function MisReservas(){
         setCxsMap(fetchedCxsMap)
         setLoading(false)
       }catch(e){ console.error(e); setError(String(e)); setLoading(false) }
+  }
+
+  // code-based asset names (in case assets were renamed to codes like t1,t2,f1...)
+  const CODE_MAP = {
+    futbol: ['f1','f2'],
+    tenis: ['t1','t2'],
+    padel: ['p1','p2'],
+    hockey: ['h1','h2'],
+    volley: ['v1','v2'],
+    basquet: ['b1','b2']
+  }
+
+  // Use shared parseLocalDate from utils to avoid timezone shifts
+
+  function imageCandidatesForCancha(c){
+    const list = []
+    try{
+      if (c && c.nombre){
+        const safe = String(c.nombre).trim().replace(/\s+/g,'')
+        if (safe){ ['jpg','jpeg','png'].forEach(ext => list.push(`/assets/${safe}.${ext}`)) }
+        const low = safe.toLowerCase()
+        if (low !== safe){ ['jpg','jpeg','png'].forEach(ext => list.push(`/assets/${low}.${ext}`)) }
+      }
+    }catch(e){/* ignore */}
+
+    try{
+      const deporteName = c && c.deporte ? (deportesMap[c.deporte] || '') : ''
+      const key = String(deporteName).toLowerCase()
+      const normalized = key.normalize ? key.normalize('NFD').replace(/[^\w\s-]/g,'') : key
+      if (normalized && CODE_MAP[normalized]){
+        const codes = CODE_MAP[normalized]
+        for(const code of codes){
+          list.push(`/assets/${code}.jpg`, `/assets/${code}.jpeg`, `/assets/${code}.png`)
+          const up = String(code).toUpperCase()
+          if (up !== code) list.push(`/assets/${up}.jpg`, `/assets/${up}.jpeg`, `/assets/${up}.png`)
+        }
+      }
+    }catch(e){/* ignore */}
+
+    // final fallback(s)
+    list.push('/assets/placeholder.jpg')
+    return list
   }
 
   if (loading) return (<div style={{padding:40,textAlign:'center'}}>Cargando reservas...</div>)
@@ -158,9 +202,8 @@ export default function MisReservas(){
             // parse fechaReservada (handle full ISO datetimes or plain dates) and format
             let fechaLabel = ''
             try{
-              const dt = new Date(fecha)
+              const dt = parseLocalDate(fecha)
               if (!isNaN(dt)){
-                  // use Spanish locale for friendly date labels
                   fechaLabel = dt.toLocaleDateString('es-AR', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })
               } else {
                 fechaLabel = fecha
@@ -173,9 +216,10 @@ export default function MisReservas(){
             const montoLabel = `$${Number(r.monto || 0).toLocaleString('es-AR', {minimumFractionDigits:2, maximumFractionDigits:2})}`
 
             return (
-              <article key={r.idReserva} style={{width:640, background:'#f3efe9', borderRadius:8, boxShadow:'0 6px 18px rgba(0,0,0,0.08)', overflow:'hidden', padding:0, display:'flex', alignItems:'stretch', minHeight:180}}>
-                <div style={{flex:'0 0 260px', overflow:'hidden', height:'100%'}}>
-                  <img src={img} alt={cancha?cancha.nombre:'Cancha'} style={{width:'100%', height:'100%', objectFit:'cover', display:'block', borderRadius:'8px 0 0 8px'}} />
+              <article key={r.idReserva} style={{width:'100%', maxWidth:640, background:'#f3efe9', borderRadius:8, boxShadow:'0 6px 18px rgba(0,0,0,0.08)', overflow:'hidden', padding:0, display:'flex', alignItems:'stretch', minHeight:180}}>
+                <div className="reserva-thumb">
+                  {/* Use fixed-size left thumbnail with object-fit cover for consistent look */}
+                  <SmartImage candidates={imageCandidatesForCancha(cancha).concat([img])} alt={cancha?cancha.nombre:'Cancha'} className="thumb-img" />
                 </div>
                 <div style={{flex:1, padding:'16px 18px'}}>
                   <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start'}}>
@@ -209,7 +253,7 @@ export default function MisReservas(){
                             // Open edit modal for this reserva (edit fechaReservada)
                             setEditingReserva(r)
                             // normalize date to yyyy-mm-dd for input[type=date]
-                            try{ const d = new Date(r.fechaReservada); if (!isNaN(d)) setEditFecha(d.toISOString().slice(0,10)); else setEditFecha(r.fechaReservada) }catch(e){ setEditFecha(r.fechaReservada) }
+                            try{ const d = parseLocalDate(r.fechaReservada); if (!isNaN(d)) setEditFecha(toYMD(d)); else setEditFecha(r.fechaReservada) }catch(e){ setEditFecha(r.fechaReservada) }
                             setModalError(null)
                             setShowEditModal(true)
                           }}>Editar</button>
@@ -263,7 +307,7 @@ export default function MisReservas(){
         <div className="modal-overlay">
           <div className="modal" role="dialog" aria-modal="true">
             <h2>Confirmar eliminación</h2>
-            <p style={{marginTop:8}}>¿Estás seguro que querés eliminar la reserva del <strong>{(() => { try{ const d = new Date(deletingReserva.fechaReservada); return d.toLocaleDateString('es-AR', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' }) }catch(e){ return deletingReserva.fechaReservada } })()}</strong>? Esta acción no se puede deshacer.</p>
+            <p style={{marginTop:8}}>¿Estás seguro que querés eliminar la reserva del <strong>{(() => { try{ const d = parseLocalDate(deletingReserva.fechaReservada); return d.toLocaleDateString('es-AR', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' }) }catch(e){ return deletingReserva.fechaReservada } })()}</strong>? Esta acción no se puede deshacer.</p>
             {deleteError && <div style={{color:'crimson', marginTop:8}}>{deleteError}</div>}
             <div style={{display:'flex', gap:8, justifyContent:'flex-end', marginTop:12}}>
               <button className="btn btn-outline" onClick={()=>{ setShowDeleteModal(false); setDeletingReserva(null); setDeleteError(null) }}>Cancelar</button>

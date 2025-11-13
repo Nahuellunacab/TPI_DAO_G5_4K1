@@ -1,6 +1,16 @@
 import React from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import ManagerCalendar from './ManagerCalendar'
+import SmartImage from '../components/SmartImage'
+// code-based asset names (match assets/ folder which uses codes like F1, T1...)
+const CODE_MAP = {
+  futbol: ['F1','F2'],
+  tenis: ['T1','T2'],
+  padel: ['P1','P2'],
+  hockey: ['H1','H2'],
+  volley: ['V1','V2'],
+  basquet: ['B1','B2']
+}
 
 const SPORTS_VISUALS = [
   { title: 'Futbol', img: '/assets/futbol.jpg', subtitle: 'Canchas de futbol abiertas y techadas con opciones de futbol 5 y 7.' },
@@ -61,7 +71,13 @@ export default function Dashboard(){
               <Link key={s.title} to={`/deporte/${slug}`} className="sport-card-link">
                 <article className="sport-card">
                   <div className="sport-media">
-                    <img src={s.img} alt={s.title} />
+                    {(() => {
+                      const candidates = [s.img, `/assets/${slug}.jpg`, `/assets/${slug}.jpeg`]
+                      const codes = CODE_MAP[slug] || []
+                      for(const c of codes){ candidates.push(`/assets/${c}.jpg`, `/assets/${c}.jpeg`, `/assets/${c}.png`) }
+                      candidates.push('/assets/placeholder.jpg')
+                      return <SmartImage candidates={candidates} alt={s.title} className="thumb-centered" />
+                    })()}
                   </div>
                   <div className="sport-body">
                     <h3>{s.title}</h3>

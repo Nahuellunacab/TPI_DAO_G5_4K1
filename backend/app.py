@@ -1,6 +1,7 @@
-from flask import Flask, jsonify
+from flask import Flask, jsonify, send_from_directory
 import sys
 from pathlib import Path
+import os
 
 ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
@@ -59,6 +60,17 @@ def create_app():
             except Exception:
                 # No bloquear el arranque si la migración falla; dejar que admin la resuelva.
                 pass
+            # Asegurar que la columna 'imagen' exista en Cancha (migración ligera)
+            try:
+                from database.mapeoCanchas import ensure_cancha_imagen_column
+                try:
+                    created_img = ensure_cancha_imagen_column()
+                    if created_img:
+                        print("Migración: columna 'imagen' añadida a Cancha")
+                except Exception:
+                    pass
+            except Exception:
+                pass
         except Exception:
             pass
         session = SessionLocal()
@@ -74,6 +86,21 @@ def create_app():
     except Exception:
         # No bloquear el arranque si algo falla aquí; solo intentamos un seed seguro.
         pass
+
+    # Serve uploaded files from /uploads/<filename> (saved to backend/uploads)
+    uploads_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), 'uploads'))
+    if not os.path.isdir(uploads_dir):
+        try:
+            os.makedirs(uploads_dir, exist_ok=True)
+        except Exception:
+            pass
+
+    @app.route('/uploads/<path:filename>')
+    def uploaded_file(filename):
+        try:
+            return send_from_directory(uploads_dir, filename)
+        except Exception:
+            return jsonify({'error': 'File not found'}), 404
 
     return app
 

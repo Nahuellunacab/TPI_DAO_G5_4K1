@@ -156,6 +156,7 @@ body{margin:0;font-family:Inter, system-ui, -apple-system, 'Segoe UI', Roboto, '
 .sports-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:22px}
 .sport-card{background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 8px 20px rgba(0,0,0,0.08);display:flex;flex-direction:column}
 .sport-media{position:relative;height:200px;overflow:hidden}
+.sport-media{position:relative;height:240px;overflow:hidden}
 .sport-media img{width:100%;height:100%;object-fit:cover;display:block}
 .sport-badge{display:none}
 .sport-body{padding:12px 14px}
@@ -179,10 +180,50 @@ body{margin:0;font-family:Inter, system-ui, -apple-system, 'Segoe UI', Roboto, '
 .photo-col{flex:1;background:#fff;border-radius:12px;overflow:hidden;height:360px;display:flex;align-items:center;justify-content:center}
 .photo-col img{width:100%;height:100%;object-fit:cover}
 .single-photo img{width:100%;height:520px;object-fit:cover;border-radius:12px}
+.fixed-thumb { overflow:hidden; border-radius:12px; }
+.fixed-thumb-img { width:100%; height:100%; object-fit:cover; display:block }
+
+/* Predefined thumb containers for consistent sizes across the app */
+.thumb-small { height:160px; overflow:hidden; border-radius:12px }
+.thumb-medium { height:240px; overflow:hidden; border-radius:12px }
+.thumb-large { height:520px; overflow:hidden; border-radius:12px }
+
+/* Reservation list specific thumb (left column) */
+.reserva-thumb { flex:0 0 260px; overflow:hidden; height:180px; border-radius:8px 0 0 8px; margin:0; padding:0; display:block }
+.reserva-thumb .thumb-img, .reserva-thumb img { width:100%; height:100%; object-fit:cover; display:block; margin:0; padding:0; vertical-align:top }
+.reserva-thumb .thumb-img { border-radius:8px 0 0 8px }
+
+/* Responsive adjustments for reservation thumbnails */
+@media (max-width: 980px) {
+  .reserva-thumb { flex: 0 0 220px; height:160px }
+}
+
+@media (max-width: 700px) {
+  /* On small screens, make thumbnail take a percentage so the card fits nicely */
+  .reserva-thumb { flex: 0 0 40%; height:140px }
+  .reserva-thumb .thumb-img, .reserva-thumb img { object-position: center center }
+  /* Ensure reservation cards are fully responsive */
+  .reservas-root article[style] { width:100% !important; max-width:640px; }
+}
+
+/* Generic thumb image class to apply directly on <img> (SmartImage) */
+.thumb-img { width:100%; height:100%; object-fit:cover; display:block }
+.thumb-centered { width:140px; height:280px; display:block; object-fit:cover; border-radius:12px; margin:20px auto }
 .placeholder{width:100%;height:100%;background:linear-gradient(90deg,#eee,#ddd);border-radius:12px}
+.add-card-frame { width:100%; height:240px; border:2px dashed rgba(0,0,0,0.08); border-radius:12px; display:flex; align-items:center; justify-content:center; background:transparent }
+.add-card-frame .plus { font-size:44px; color:#666 }
 .option-row{display:flex;justify-content:space-between;padding:18px 0}
 .price{color:#777}
 .detail-actions{display:flex;gap:12px;justify-content:center;margin-top:56px;margin-bottom:24px}
+
+/* NewCanchaModal specific styles */
+.asset-btn{border:1px solid #eee;padding:6px;background:transparent;border-radius:8px;display:inline-block}
+.asset-btn img{display:block}
+.asset-btn.selected{border:3px solid #7b3df0; box-shadow:0 6px 18px rgba(123,61,240,0.12); transform:translateY(-2px)}
+.asset-btn:hover{transform:translateY(-2px)}
+.nc-file-preview{width:100%;height:140px;border-radius:8px;overflow:hidden;background:#fafafa;border:1px dashed rgba(0,0,0,0.06);display:flex;align-items:center;justify-content:center}
+.nc-file-preview img{width:100%;height:100%;object-fit:cover;display:block}
+.nc-file-meta{font-size:13px;color:#555}
 
 /* Image hover overlay: darken image and reveal overlay with info/buttons
   Scoped to sport detail so dashboard only acts as selector. */
@@ -280,3 +321,13 @@ body{margin:0;font-family:Inter, system-ui, -apple-system, 'Segoe UI', Roboto, '
   .reserva-grid .time-cell { min-width:120px; }
   .res-slot { height:36px }
 }
+
+/* Additional modal & thumbnail tweaks for NewCanchaModal */
+.thumb-centered{ height:64px; width:64px; object-fit:cover; border-radius:8px; display:block; margin:0 auto }
+.add-card-frame{ height:120px; width:120px; border:2px dashed #ddd; border-radius:10px; display:flex; align-items:center; justify-content:center; color:#666; cursor:pointer }
+.modal .thumb-selected{ box-shadow:0 4px 12px rgba(0,0,0,0.08); transform:translateY(-2px) }
+.modal h2{ margin:0 0 8px 0 }
+.btn{ padding:8px 12px; border-radius:6px; border:none }
+.btn-outline{ background:#fff; border:1px solid #ccc }
+.btn-primary{ background:var(--verde-oscuro); color:#fff }
+

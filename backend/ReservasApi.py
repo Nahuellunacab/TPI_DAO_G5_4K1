@@ -77,7 +77,6 @@ def reservas_resumen_por_cancha(idCancha: int):
         from basicas import list_reservas_por_cancha
         rows = list_reservas_por_cancha(idCancha=idCancha)
         out = []
-        today = date.today()
         for r in rows:
             # r is a dict returned by basicas.list_reservas_por_cancha
             try:
@@ -89,10 +88,16 @@ def reservas_resumen_por_cancha(idCancha: int):
                     fr_date = fr
             except Exception:
                 fr_date = None
-            if fr_date is None or fr_date < today:
+            # Include all reservations (past and future). The UI will
+            # compute totals and weekly aggregates client-side based on
+            # the full set of reservas for this cancha.
+            if fr_date is None:
+                # If no fechaReservada, skip the row
                 continue
 
             servicios_set = []
+            hora_inicio_vals = []
+            hora_fin_vals = []
             # collect service descriptions for detalles
             for d in r.get('detalles', []):
                 idCxS = d.get('idCxS')
@@ -109,6 +114,18 @@ def reservas_resumen_por_cancha(idCancha: int):
                             servicios_set.append(desc)
                 except Exception:
                     continue
+                # try to attach horario info if available
+                try:
+                    idHorario = d.get('idHorario')
+                    if idHorario:
+                        hobj = session.get(Horario, int(idHorario))
+                        if hobj is not None:
+                            if getattr(hobj, 'horaInicio', None):
+                                hora_inicio_vals.append(hobj.horaInicio)
+                            if getattr(hobj, 'horaFin', None):
+                                hora_fin_vals.append(hobj.horaFin)
+                except Exception:
+                    pass
 
             # Business rule for UI: keep 'ninguno' in DB but do not show it
             # when there are other services available. If the only service is
@@ -132,10 +149,14 @@ def reservas_resumen_por_cancha(idCancha: int):
 
             out.append({
                 'idReserva': r.get('idReserva'),
-                'fechaReservada': r.get('fechaReservada'),
+                # normalize fechaReservada to ISO string (YYYY-MM-DD) for frontend
+                'fechaReservada': fr_date.isoformat() if fr_date is not None else None,
                 'cliente': cliente_nombre,
                 'servicios': servicios_set,
-                'monto': r.get('monto')
+                'monto': r.get('monto'),
+                'horaInicio': sorted(hora_inicio_vals)[0] if hora_inicio_vals else None,
+                'horaFin': sorted(hora_fin_vals)[-1] if hora_fin_vals else None,
+                'detallesCount': len(r.get('detalles', []))
             })
 
         return jsonify(out)
@@ -189,63 +210,93 @@ def reservas_calendar():
     end = request.args.get('end')
     session = SessionLocal()
     try:
-        q = (
-            session.query(DetalleReserva, Reserva, Horario, CanchaxServicio, Cancha)
-            .join(Reserva, DetalleReserva.idReserva == Reserva.idReserva)
-            .join(CanchaxServicio, DetalleReserva.idCxS == CanchaxServicio.idCxS)
-            .join(Cancha, CanchaxServicio.idCancha == Cancha.idCancha)
-            .outerjoin(Horario, DetalleReserva.idHorario == Horario.idHorario)
-        )
-
+        q_res = session.query(Reserva)
         if start:
             try:
                 start_date = datetime.fromisoformat(start).date()
-                q = q.filter(Reserva.fechaReservada >= start_date)
+                q_res = q_res.filter(Reserva.fechaReservada >= start_date)
             except Exception:
                 pass
         if end:
             try:
                 end_date = datetime.fromisoformat(end).date()
-                q = q.filter(Reserva.fechaReservada <= end_date)
+                q_res = q_res.filter(Reserva.fechaReservada <= end_date)
             except Exception:
                 pass
 
-        rows = q.all()
+        reservas = q_res.all()
         out = []
-        for detalle, reserva, horario, cvs, cancha in rows:
-            # fetch related Servicio and Deporte and Cliente info defensively
-            servicio = None
-            deporte = None
-            cliente = None
+        for reserva in reservas:
+            # load detalles for this reserva and their horarios/canchas
+            det_q = (
+                session.query(DetalleReserva, Horario, CanchaxServicio, Cancha)
+                .join(CanchaxServicio, DetalleReserva.idCxS == CanchaxServicio.idCxS)
+                .join(Cancha, CanchaxServicio.idCancha == Cancha.idCancha)
+                .outerjoin(Horario, DetalleReserva.idHorario == Horario.idHorario)
+                .filter(DetalleReserva.idReserva == reserva.idReserva)
+            )
+            detalles = det_q.all()
+            if not detalles:
+                continue
+
+            # determine representative cancha/deporte using the first detalle
+            first_detalle, first_horario, first_cvs, first_cancha = detalles[0]
+            deporte_nombre = None
             try:
-                servicio = session.get(type(cvs).servicio.property.mapper.class_, cvs.idServicio) if cvs is not None else None
+                deporte_obj = None
+                if first_cancha is not None:
+                    # try to get deporte name defensively
+                    deporte_obj = session.get(type(first_cancha).deporte.property.mapper.class_, first_cancha.deporte)
+                if deporte_obj is not None:
+                    deporte_nombre = getattr(deporte_obj, 'nombre', None)
             except Exception:
-                servicio = None
+                deporte_nombre = None
+
+            # compute min horaInicio and max horaFin across horarios (if present)
+            hora_inicio_vals = []
+            hora_fin_vals = []
+            for detalle, horario, cvs, cancha in detalles:
+                try:
+                    if horario is not None and getattr(horario, 'horaInicio', None):
+                        hora_inicio_vals.append(horario.horaInicio)
+                    if horario is not None and getattr(horario, 'horaFin', None):
+                        hora_fin_vals.append(horario.horaFin)
+                except Exception:
+                    continue
+
+            horaInicio = None
+            horaFin = None
             try:
-                deporte = session.get(type(cancha).deporte.property.mapper.class_, cancha.deporte) if cancha is not None else None
+                if hora_inicio_vals:
+                    # assume stored as strings like '09:00' or time objects; pick min lexicographically for strings
+                    horaInicio = sorted(hora_inicio_vals)[0]
+                if hora_fin_vals:
+                    horaFin = sorted(hora_fin_vals)[hora_fin_vals.__len__()-1]
             except Exception:
-                deporte = None
+                horaInicio = hora_inicio_vals[0] if hora_inicio_vals else None
+                horaFin = hora_fin_vals[-1] if hora_fin_vals else None
+
+            # client name
+            cliente_nombre = None
             try:
-                cliente = session.get(type(reserva).cliente.property.mapper.class_, reserva.idCliente) if reserva is not None else None
+                cl = session.get(Cliente, reserva.idCliente)
+                if cl:
+                    cliente_nombre = f"{getattr(cl,'nombre','')} {getattr(cl,'apellido','') }".strip()
             except Exception:
-                cliente = None
+                cliente_nombre = None
 
             out.append({
-                'idDetalle': detalle.idDetalle,
                 'idReserva': reserva.idReserva,
                 'fechaReservada': reserva.fechaReservada.isoformat() if hasattr(reserva.fechaReservada, 'isoformat') else str(reserva.fechaReservada),
-                'idCancha': cancha.idCancha if cancha is not None else None,
-                'nombreCancha': cancha.nombre if cancha is not None else None,
-                'idDeporte': cancha.deporte if cancha is not None else None,
-                'nombreDeporte': deporte.nombre if deporte is not None else None,
-                'idHorario': detalle.idHorario,
-                'horaInicio': horario.horaInicio if horario is not None else None,
-                'horaFin': horario.horaFin if horario is not None else None,
-                'idCxS': detalle.idCxS,
-                'servicioDescripcion': servicio.descripcion if servicio is not None else None,
+                'idCancha': first_cancha.idCancha if first_cancha is not None else None,
+                'nombreCancha': first_cancha.nombre if first_cancha is not None else None,
+                'idDeporte': first_cancha.deporte if first_cancha is not None else None,
+                'nombreDeporte': deporte_nombre,
+                'horaInicio': horaInicio,
+                'horaFin': horaFin,
+                'cantidadDetalles': len(detalles),
                 'idCliente': reserva.idCliente,
-                'clienteNombre': cliente.nombre if cliente is not None else None,
-                'clienteApellido': cliente.apellido if cliente is not None else None,
+                'clienteNombre': cliente_nombre,
             })
 
         return jsonify(out)
