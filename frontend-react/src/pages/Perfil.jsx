@@ -140,6 +140,9 @@ export default function Perfil(){
   // Check if user is manager or admin
   const isManager = usuario && (Number(usuario.permisos) === 2 || Number(usuario.permisos) === 3)
   const isAdmin = usuario && Number(usuario.permisos) === 3
+  const permisosNum = usuario ? Number(usuario.permisos) : 1
+  // UI-only label: map permisos to human-readable roles (1=Cliente, 2=Supervisor, 3=Administrador)
+  const roleLabel = permisosNum === 3 ? 'Administrador' : permisosNum === 2 ? 'Supervisor' : 'Cliente'
 
   if (loading) return (<div style={{padding:40,textAlign:'center',background:'#6FA9BB',minHeight:'100vh',color:'#fff'}}>Cargando perfil...</div>)
 
@@ -241,7 +244,7 @@ export default function Perfil(){
                 fontSize:14,
                 fontWeight:600
               }}>
-                {isAdmin ? 'Administrador' : isManager ? 'Supervisor' : 'Cliente'}
+                {roleLabel}
               </span>
             </div>
           </div>
