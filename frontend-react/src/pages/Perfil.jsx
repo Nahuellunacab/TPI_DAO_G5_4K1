@@ -144,6 +144,8 @@ export default function Perfil(){
   // UI-only label: map permisos to human-readable roles (1=Cliente, 2=Supervisor, 3=Administrador)
   // Prefer the permiso name returned by the API when available (avoids relying on numeric IDs)
   const roleLabel = usuario && usuario.permisoNombre ? usuario.permisoNombre : (permisosNum === 3 ? 'Administrador' : permisosNum === 2 ? 'Supervisor' : 'Cliente')
+  // Top nav label for dashboard: show 'Calendario' to admins (permisos === 3)
+  const topDashboardLabel = isAdmin ? 'Calendario' : 'Reservas'
 
   if (loading) return (<div style={{padding:40,textAlign:'center',background:'#6FA9BB',minHeight:'100vh',color:'#fff'}}>Cargando perfil...</div>)
 
@@ -173,7 +175,7 @@ export default function Perfil(){
                 </>
               ) : (
                 <>
-                  <Link to="/dashboard" className="nav-link btn-reservas">Reservas</Link>
+                  <Link to="/dashboard" className="nav-link btn-reservas">{topDashboardLabel}</Link>
                   <Link to="/torneos-admin" className="nav-link btn-perfil">Torneos</Link>
                   <Link to="/mis-reservas" className="nav-link btn-calendar">Mis Reservas</Link>
                 </>

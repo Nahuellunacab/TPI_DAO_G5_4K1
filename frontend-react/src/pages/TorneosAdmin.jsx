@@ -656,6 +656,7 @@ export default function TorneosAdmin(){
     }
   }
 
+  // Check if user is supervisor/admin (simple numeric flag)
   const isSupervisor = permisos === 3
 
   return (
@@ -680,7 +681,7 @@ export default function TorneosAdmin(){
                 <>
                   <Link to="/dashboard" className="nav-link btn-reservas">Reservar</Link>
                   <Link to="/torneos-admin" className="nav-link btn-perfil">Torneos</Link>
-                  <Link to="/mis-reservas" className="nav-link btn-calendar">Mis Reservas</Link>
+                  <Link to="/proximas-reservas" className="nav-link btn-calendar">Próxima Reserva</Link>
                 </>
               )}
               <Link to="/perfil" className="nav-link btn-perfil">Mi Perfil</Link>

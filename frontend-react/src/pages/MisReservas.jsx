@@ -24,6 +24,10 @@ const CODE_MAP = {
 
 export default function MisReservas(){
   const navigate = useNavigate()
+  // determine permisos from localStorage to adapt header labels
+  let storedUser = null
+  try{ const raw = localStorage.getItem('user'); storedUser = raw ? JSON.parse(raw) : null }catch(e){ storedUser = null }
+  const permisos = storedUser ? Number(storedUser.permisos) : null
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [reservas, setReservas] = useState([])
@@ -53,7 +57,10 @@ export default function MisReservas(){
     try{
         const raw = (()=>{ try{ const r = localStorage.getItem('user'); return r ? JSON.parse(r) : null }catch(e){ return null } })()
         if (!raw || !raw.idCliente){
-          navigate('/login')
+          // If the current user is not a cliente (e.g. admin), do not force logout.
+          // Redirecting to /login causes the visible "logged out" effect.
+          // Better: redirect back to dashboard so admin stays in the app.
+          navigate('/dashboard')
           return
         }
         const idCliente = raw.idCliente
@@ -165,7 +172,7 @@ export default function MisReservas(){
           <img src="/assets/logo.png" alt="logo" className="logo" />
           <nav className="nav">
             <div className="header-actions">
-              <Link to="/dashboard" className="nav-link btn-reservas">Reservar</Link>
+              <Link to="/dashboard" className="nav-link btn-reservas">{permisos === 3 ? 'Calendario' : 'Reservar'}</Link>
               <Link to="/torneos-admin" className="nav-link btn-perfil">Torneos</Link>
               <Link to="/perfil" className="nav-link btn-perfil">Mi Perfil</Link>
               <button onClick={() => { try{ localStorage.removeItem('token'); localStorage.removeItem('user'); localStorage.removeItem('auth'); } finally { navigate('/') } }} className="btn btn-logout">Cerrar Sesión</button>
