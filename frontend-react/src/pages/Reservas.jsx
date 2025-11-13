@@ -27,6 +27,21 @@ function visibleServices(arr){
   }catch(e){ return arr }
 }
 
+// Services to show in the reservation modal: remove bar/kiosk and ball-rental options
+function modalVisibleServices(arr){
+  try{
+    const vis = visibleServices(arr)
+    const forbidden = ['pelot', 'pelota', 'pelotas', 'bar', 'kiosc', 'kiosko']
+    return vis.filter(s => {
+      try{
+        const d = (s && s.servicio && s.servicio.descripcion) ? String(s.servicio.descripcion).toLowerCase() : ''
+        for(const k of forbidden) if (d.indexOf(k) >= 0) return false
+        return true
+      }catch(e){ return true }
+    })
+  }catch(e){ return Array.isArray(arr) ? arr : [] }
+}
+
 function formatDayHeader(date){
   // e.g., 'Lun 10/11'
   const weekday = new Intl.DateTimeFormat('es', { weekday: 'short' }).format(date)
@@ -52,6 +67,28 @@ function formatTimeRange(h){
   }
 }
 
+function resolveDeporteNameFromCancha(cancha, deportesMap){
+  try{
+    if (!cancha) return ''
+    const dfield = cancha.deporte
+    if (dfield !== null && dfield !== undefined){
+      if (typeof dfield === 'number') return deportesMap[dfield] || ''
+      if (typeof dfield === 'string'){
+        // if string contains only digits, treat as id
+        if (/^\d+$/.test(dfield)){
+          const id = Number(dfield)
+          return deportesMap[id] || ''
+        }
+        // otherwise return string value
+        return dfield
+      }
+      if (dfield && dfield.nombre) return dfield.nombre
+    }
+    if (cancha.deporteNombre) return cancha.deporteNombre
+    return cancha.nombre || ''
+  }catch(e){ return '' }
+}
+
 export default function Reservas(){
   const query = useQuery()
   const idCanchaParam = query.get('idCancha')
@@ -59,6 +96,7 @@ export default function Reservas(){
   const [horarios, setHorarios] = useState([])
   const [events, setEvents] = useState([])
   const [estadosMap, setEstadosMap] = useState({})
+  const [deportesMap, setDeportesMap] = useState({})
   const [weekStart, setWeekStart] = useState(startOfWeekMonday(new Date()))
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -101,6 +139,16 @@ export default function Reservas(){
           const m = {}
           for(const row of rows) m[row.idEstado] = row.nombre || ''
           setEstadosMap(m)
+        }
+      }catch(e){ /* ignore */ }
+      // load deportes map (id -> nombre) so we can resolve deporte names
+      try{
+        const dr = await fetch('/api/deportes')
+        if (dr.ok){
+          const ddata = await dr.json()
+          const dm = {}
+          for(const dd of ddata) dm[dd.idDeporte] = dd.nombre || ''
+          setDeportesMap(dm)
         }
       }catch(e){ /* ignore */ }
       setLoading(false)
@@ -286,10 +334,12 @@ export default function Reservas(){
   // determine if horario is >= 18:00 (requires iluminación)
   let requiresIluminacion = isTechada // techadas always require iluminación
   try{
-    const horaStr = typeof horario.horaInicio === 'string' ? horario.horaInicio : ''
+    let horaStr = typeof horario.horaInicio === 'string' ? horario.horaInicio : ''
     if (horaStr){
       const parts = horaStr.split(':')
       const hora = Number(parts[0]) || 0
+      // Only force iluminación for late hours when the sport is fútbol or cancha is techada
+      // For any sport, after 18:00 we require iluminación
       if (hora >= 18) {
         requiresIluminacion = true
         console.log('Horario >= 18:00 detectado, iluminación requerida')
@@ -303,7 +353,7 @@ export default function Reservas(){
   const initialServices = []
   try{
     if (requiresIluminacion && Array.isArray(servicios)){
-      for(const s of visibleServices(servicios)){
+      for(const s of modalVisibleServices(servicios)){
         try{
           const desc = (s.servicio && s.servicio.descripcion) ? s.servicio.descripcion.toLowerCase() : ''
           if (desc.indexOf('ilumin') >= 0 || desc.indexOf('luz') >= 0){ initialServices.push(Number(s.idCxS)); break }
@@ -454,7 +504,7 @@ export default function Reservas(){
   function computeModalTotal(){
     if (!selectedSlot) return 0
     const servicios = Array.isArray(selectedSlot.servicios) ? selectedSlot.servicios : []
-    const visible = visibleServices(servicios)
+    const visible = modalVisibleServices(servicios)
     const base = Number(selectedSlot.cancha && selectedSlot.cancha.precioHora ? selectedSlot.cancha.precioHora : 0)
   // Some services are one-time fees per reservation (e.g. bar/kiosco, comida post-partido).
   // NOTE: iluminación should be charged per turno, so we don't include 'ilumin'/'luz' here.
@@ -465,7 +515,7 @@ export default function Reservas(){
       const sid = Number(s.idCxS)
       const desc = (s.servicio && s.servicio.descripcion) ? (s.servicio.descripcion||'').toLowerCase() : ''
       const isIllum = desc.indexOf('ilumin') >= 0 || desc.indexOf('luz') >= 0
-      const forcedChecked = selectedSlot.isTechada && isIllum
+      const forcedChecked = selectedSlot.requiresIluminacion && isIllum
       const selected = forcedChecked || modalSelectedServices.includes(sid) || modalSelectedServices.includes(String(sid))
       if (!selected) continue
       const precio = Number(s.precioAdicional || 0)
@@ -502,8 +552,7 @@ export default function Reservas(){
       }catch(e){ console.warn('No se pudo obtener cliente desde API', e) }
 
   const fechaReservada = toYMD(parseLocalDate(block.startDate))
-  setSelectedSlot({ date: parseLocalDate(block.startDate), fechaReservada, horario: block.horarios[0], cancha, servicios, cliente, tiposDocumento, blockHorarios: block.horarios })
-      // determine techada and pre-select iluminación if needed
+  // determine techada and pre-select iluminación if needed
       let isTechadaBlk = false
       try{
         const estadoName = (cancha && cancha.estado) ? (estadosMap[cancha.estado] || '') : ''
@@ -511,14 +560,27 @@ export default function Reservas(){
         if (key.indexOf('tech') >= 0 || key.indexOf('techa') >= 0 || key.indexOf('cubiert') >= 0 || key.indexOf('cerrad') >= 0) isTechadaBlk = true
       }catch(e){ isTechadaBlk = false }
       const initialServicesBlk = []
+      let requiresIluminacionBlk = isTechadaBlk
       try{
-        if (isTechadaBlk && Array.isArray(servicios)){
-          for(const s of visibleServices(servicios)){
-            try{ const desc = (s.servicio && s.servicio.descripcion) ? s.servicio.descripcion.toLowerCase() : ''; if (desc.indexOf('ilumin') >= 0 || desc.indexOf('luz') >= 0){ initialServicesBlk.push(Number(s.idCxS)); break } }catch(e){}
-          }
+        // check first horario hour and deporte for fútbol
+        const horaStr = block.horarios && block.horarios[0] && typeof block.horarios[0].horaInicio === 'string' ? block.horarios[0].horaInicio : ''
+        if (horaStr){
+          const parts = horaStr.split(':')
+          const hora = Number(parts[0]) || 0
+          // For any sport, after 18:00 we require iluminación
+          if (hora >= 18) requiresIluminacionBlk = true
         }
       }catch(e){}
+      try{
+        if (requiresIluminacionBlk && Array.isArray(servicios)){
+            for(const s of modalVisibleServices(servicios)){
+              try{ const desc = (s.servicio && s.servicio.descripcion) ? s.servicio.descripcion.toLowerCase() : ''; if (desc.indexOf('ilumin') >= 0 || desc.indexOf('luz') >= 0){ initialServicesBlk.push(Number(s.idCxS)); break } }catch(e){}
+            }
+          }
+      }catch(e){}
+      // include techada and forced illumination flag into selectedSlot
       setModalSelectedServices(initialServicesBlk)
+      setSelectedSlot({ date: parseLocalDate(block.startDate), fechaReservada, horario: block.horarios[0], cancha, servicios, cliente, tiposDocumento, blockHorarios: block.horarios, isTechada: isTechadaBlk, requiresIluminacion: requiresIluminacionBlk })
       setShowModal(true)
       // clear pending / selection state
       setTempPendingBlock(null)
@@ -680,15 +742,17 @@ export default function Reservas(){
                   })()}</p>
                   <p style={{margin:0}}><strong>Horario:</strong> {formatTimeRange(selectedSlot.horario)}</p>
                   {/* Servicios disponibles para esta cancha */}
-                  {selectedSlot && Array.isArray(selectedSlot.servicios) && visibleServices(selectedSlot.servicios).length > 0 && (
+                  {selectedSlot && Array.isArray(selectedSlot.servicios) && modalVisibleServices(selectedSlot.servicios).length > 0 && (
                     <div style={{marginTop:12}}>
                       <p style={{margin:0}}><strong>Servicios adicionales:</strong></p>
                       <div style={{marginTop:6}}>
-                        {visibleServices(selectedSlot.servicios).map(s => {
+                        {modalVisibleServices(selectedSlot.servicios).map(s => {
                           const sid = Number(s.idCxS)
                           const desc = (s.servicio && s.servicio.descripcion) ? (s.servicio.descripcion || '').toLowerCase() : ''
                           const isIllum = desc.indexOf('ilumin') >= 0 || desc.indexOf('luz') >= 0
                           const forcedChecked = selectedSlot.requiresIluminacion && isIllum
+                          // If iluminación is required for this slot, hide the option
+                          if (isIllum && selectedSlot.requiresIluminacion) return null
                           return (
                           <label key={s.idCxS} style={{display:'block', fontSize:14}}>
                             <input
@@ -768,8 +832,8 @@ export default function Reservas(){
                   // compute final list of servicios including mandatory iluminación when cancha is techada
                   const finalServicios = Array.isArray(modalSelectedServices) ? [...modalSelectedServices.map(x=>Number(x))] : []
                   try{
-                    if (selectedSlot && selectedSlot.isTechada && Array.isArray(selectedSlot.servicios)){
-                      for(const s of visibleServices(selectedSlot.servicios)){
+                    if (selectedSlot && selectedSlot.requiresIluminacion && Array.isArray(selectedSlot.servicios)){
+                      for(const s of modalVisibleServices(selectedSlot.servicios)){
                         const sid = Number(s.idCxS)
                         const desc = (s.servicio && s.servicio.descripcion) ? (s.servicio.descripcion||'').toLowerCase() : ''
                         if ((desc.indexOf('ilumin') >= 0 || desc.indexOf('luz') >= 0) && !finalServicios.includes(sid)){
