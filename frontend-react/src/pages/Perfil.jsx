@@ -142,7 +142,8 @@ export default function Perfil(){
   const isAdmin = usuario && Number(usuario.permisos) === 3
   const permisosNum = usuario ? Number(usuario.permisos) : 1
   // UI-only label: map permisos to human-readable roles (1=Cliente, 2=Supervisor, 3=Administrador)
-  const roleLabel = permisosNum === 3 ? 'Administrador' : permisosNum === 2 ? 'Supervisor' : 'Cliente'
+  // Prefer the permiso name returned by the API when available (avoids relying on numeric IDs)
+  const roleLabel = usuario && usuario.permisoNombre ? usuario.permisoNombre : (permisosNum === 3 ? 'Administrador' : permisosNum === 2 ? 'Supervisor' : 'Cliente')
 
   if (loading) return (<div style={{padding:40,textAlign:'center',background:'#6FA9BB',minHeight:'100vh',color:'#fff'}}>Cargando perfil...</div>)
 

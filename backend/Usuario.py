@@ -138,7 +138,20 @@ def get_usuario(id):
             # No associated record, use Usuario fields if they exist
             user_data['tipoRegistro'] = None
             user_data['idRegistro'] = None
-        
+        # Include human-readable permiso name when available to avoid numeric mapping issues
+        try:
+            if getattr(obj, 'permiso_rel', None) and getattr(obj.permiso_rel, 'nombre', None):
+                user_data['permisoNombre'] = obj.permiso_rel.nombre
+            else:
+                # fallback: try to load Permiso by id
+                if getattr(obj, 'permisos', None) is not None:
+                    perm = session.get(Permiso, obj.permisos)
+                    if perm:
+                        user_data['permisoNombre'] = perm.nombre
+        except Exception:
+            # best-effort; do not break response on permission lookup failure
+            user_data['permisoNombre'] = None
+
         print(f"DEBUG - Retornando: {user_data}")
         return jsonify(user_data)
     finally:
@@ -261,6 +274,18 @@ def update_usuario(id):
             user_data['tipoRegistro'] = 'empleado'
             user_data['idRegistro'] = empleado.idEmpleado
         
+        # Also include human-readable permiso name when present
+        try:
+            if getattr(obj, 'permiso_rel', None) and getattr(obj.permiso_rel, 'nombre', None):
+                user_data['permisoNombre'] = obj.permiso_rel.nombre
+            else:
+                if getattr(obj, 'permisos', None) is not None:
+                    perm = session.get(Permiso, obj.permisos)
+                    if perm:
+                        user_data['permisoNombre'] = perm.nombre
+        except Exception:
+            user_data['permisoNombre'] = None
+
         return jsonify(user_data)
     except Exception as e:
         session.rollback()
