@@ -212,6 +212,15 @@ export default function Empleados(){
     try{
       const emp = deletingEmpleado
       
+      // Verificar si el usuario tiene permisos tipo 3 (administrador)
+      if (emp.usuario && Number(emp.usuario.permisos) === 3) {
+        alert('No se puede eliminar un empleado con permisos de administrador')
+        setShowDeleteModal(false)
+        setDeletingEmpleado(null)
+        setDeleteSubmitting(false)
+        return
+      }
+      
       // First delete empleado
       const empRes = await fetch(`/api/empleados/${emp.idEmpleado}`, {
         method: 'DELETE'
@@ -318,10 +327,24 @@ export default function Empleados(){
                     <button 
                       className="btn btn-danger" 
                       onClick={() => {
+                        if (emp.usuario && Number(emp.usuario.permisos) === 3) {
+                          alert('No se puede eliminar un empleado con permisos de administrador')
+                          return
+                        }
                         setDeletingEmpleado(emp)
                         setShowDeleteModal(true)
                       }}
-                      style={{padding:'6px 12px', fontSize:14, background:'#c0392b', color:'#fff', border:'none'}}
+                      disabled={emp.usuario && Number(emp.usuario.permisos) === 3}
+                      style={{
+                        padding:'6px 12px', 
+                        fontSize:14, 
+                        background: emp.usuario && Number(emp.usuario.permisos) === 3 ? '#999' : '#c0392b', 
+                        color:'#fff', 
+                        border:'none',
+                        cursor: emp.usuario && Number(emp.usuario.permisos) === 3 ? 'not-allowed' : 'pointer',
+                        opacity: emp.usuario && Number(emp.usuario.permisos) === 3 ? 0.5 : 1
+                      }}
+                      title={emp.usuario && Number(emp.usuario.permisos) === 3 ? 'No se puede eliminar administradores' : 'Eliminar empleado'}
                     >
                       Eliminar
                     </button>
