@@ -23,6 +23,7 @@ export default function ClientesAdmin(){
   const [deletingCliente, setDeletingCliente] = useState(null)
   const [deleteSubmitting, setDeleteSubmitting] = useState(false)
   const [tiposDoc, setTiposDoc] = useState([])
+  const [searchTerm, setSearchTerm] = useState('')
 
   useEffect(()=>{
     // Check permissions: only permisos === 3 (admin)
@@ -259,13 +260,26 @@ export default function ClientesAdmin(){
     }
   }
 
+  const filteredClientes = clientes.filter(cli => {
+    if (!searchTerm) return true
+    const search = searchTerm.toLowerCase()
+    return (
+      (cli.nombre && cli.nombre.toLowerCase().includes(search)) ||
+      (cli.apellido && cli.apellido.toLowerCase().includes(search)) ||
+      (cli.numeroDoc && cli.numeroDoc.toString().includes(search))
+    )
+  })
+
   if (loading) return (<div style={{padding:40,textAlign:'center'}}>Cargando...</div>)
 
   return (
     <div style={{minHeight:'100vh', background:'var(--gris)'}}>
       <header className="site-header">
         <div className="container header-inner">
-          <img src="/assets/logo.png" alt="logo" className="logo" />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <img src="/assets/logo.png" alt="logo" className="logo" />
+            <span style={{ fontSize: '24px', fontWeight: '700', color: 'var(--verde-oscuro)' }}>GoField</span>
+          </div>
           <nav className="nav">
             <div className="header-actions">
               <Link to="/proximas-reservas" className="nav-link btn-calendar">Próximas Reservas</Link>
@@ -273,7 +287,7 @@ export default function ClientesAdmin(){
               <Link to="/empleados" className="nav-link btn-perfil">Empleados y Usuarios</Link>
               <Link to="/clientes-admin" className="nav-link btn-perfil">Clientes</Link>
               <Link to="/torneos-admin" className="nav-link btn-perfil">Torneos</Link>
-              <Link to="/pagos" className="nav-link btn-perfil">Pagos</Link>
+              <Link to="/pagos" className="nav-link btn-perfil">Ingresos</Link>
               <Link to="/reportes" className="nav-link btn-perfil">Reportes</Link>
               <Link to="/perfil" className="nav-link btn-perfil">Mi Perfil</Link>
               <button onClick={handleLogout} className="btn btn-logout">Cerrar Sesión</button>
@@ -296,6 +310,24 @@ export default function ClientesAdmin(){
           </button>
         </div>
         
+        <div style={{marginBottom:20}}>
+          <input
+            type="text"
+            placeholder="Buscar por nombre, apellido o documento..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            style={{
+              width: '100%',
+              maxWidth: '450px',
+              padding: '10px 16px',
+              fontSize: '16px',
+              border: '1px solid #ddd',
+              borderRadius: '6px',
+              outline: 'none'
+            }}
+          />
+        </div>
+        
         <div style={{background:'#fff', borderRadius:8, overflow:'hidden', boxShadow:'0 2px 8px rgba(0,0,0,0.1)'}}>
           <table style={{width:'100%', borderCollapse:'collapse'}}>
             <thead>
@@ -310,14 +342,14 @@ export default function ClientesAdmin(){
               </tr>
             </thead>
             <tbody>
-              {clientes.length === 0 && (
+              {filteredClientes.length === 0 && (
                 <tr>
                   <td colSpan="7" style={{padding:40, textAlign:'center', color:'#999'}}>
-                    No hay clientes registrados
+                    {searchTerm ? 'No se encontraron clientes' : 'No hay clientes registrados'}
                   </td>
                 </tr>
               )}
-              {clientes.map((cli) => (
+              {filteredClientes.map((cli) => (
                 <tr key={cli.idCliente} style={{borderBottom:'1px solid #eee'}}>
                   <td style={{padding:12}}>{cli.nombre}</td>
                   <td style={{padding:12}}>{cli.apellido}</td>

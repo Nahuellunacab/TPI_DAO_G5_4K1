@@ -118,8 +118,11 @@ export default function Canchas(){
     <div className="canchas-root">
       <header className="site-header">
         <div className="container header-inner">
-          <img src="/assets/logo.png" alt="logo" className="logo" />
-           <nav className="nav">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <img src="/assets/logo.png" alt="logo" className="logo" />
+            <span style={{ fontSize: '24px', fontWeight: '700', color: 'var(--verde-oscuro)' }}>GoField</span>
+          </div>
+          <nav className="nav">
                <div className="header-actions">
                <Link to="/dashboard" className="nav-link btn-calendar">Calendario</Link>
                <Link to="/proximas-reservas" className="nav-link btn-reservas">Próximas Reservas</Link>
@@ -128,7 +131,7 @@ export default function Canchas(){
                    <Link to="/empleados" className="nav-link btn-perfil">Empleados y Usuarios</Link>
                    <Link to="/clientes-admin" className="nav-link btn-perfil">Clientes</Link>
                    <Link to="/torneos-admin" className="nav-link btn-perfil">Torneos</Link>
-                   <Link to="/pagos" className="nav-link btn-perfil">Pagos</Link>
+                   <Link to="/pagos" className="nav-link btn-perfil">Ingresos</Link>
                    <Link to="/reportes" className="nav-link btn-perfil">Reportes</Link>
                  </>
                )}

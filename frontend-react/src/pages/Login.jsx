@@ -69,8 +69,9 @@ export default function Login(){
     <div className="login-root">
       <header className="site-header">
         <div className="container header-inner">
-            <Link to="/">
+            <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '12px', textDecoration: 'none' }}>
               <img src="/assets/logo.png" alt="logo" className="logo" />
+              <span style={{ fontSize: '24px', fontWeight: '700', color: 'var(--verde-oscuro)' }}>GoField</span>
             </Link>
         </div>
       </header>

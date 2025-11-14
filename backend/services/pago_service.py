@@ -169,17 +169,24 @@ def obtener_pago_por_reserva(idReserva: int):
 
 def listar_pagos_pendientes():
     """
-    Lista todas las reservas que no tienen pago asociado
-    Sin importar el estado de la reserva
+    Lista todas las reservas CONFIRMADAS que no tienen pago asociado
     """
     session = SessionLocal()
     try:
-        # Obtener TODAS las reservas
-        todas_reservas = session.query(Reserva).all()
+        from database.mapeoCanchas import EstadoReserva
+        
+        # Obtener el ID del estado "Confirmada"
+        estado_confirmada = session.query(EstadoReserva).filter_by(nombre='Confirmada').first()
+        
+        if not estado_confirmada:
+            return []
+        
+        # Obtener solo las reservas confirmadas
+        reservas_confirmadas = session.query(Reserva).filter_by(estado=estado_confirmada.idEstado).all()
         
         reservas_sin_pago = []
         
-        for reserva in todas_reservas:
+        for reserva in reservas_confirmadas:
             # Verificar que no tenga pago registrado
             pago = session.query(Pago).filter_by(idReserva=reserva.idReserva).first()
             if not pago:

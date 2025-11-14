@@ -12,7 +12,10 @@ export default function Home(){
     <div className="home-root">
       <header className="site-header">
         <div className="container header-inner">
-          <img src="/assets/logo.png" alt="logo" className="logo" />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <img src="/assets/logo.png" alt="logo" className="logo" />
+            <span style={{ fontSize: '24px', fontWeight: '700', color: 'var(--verde-oscuro)' }}>GoField</span>
+          </div>
         </div>
       </header>
 
@@ -56,8 +59,9 @@ export default function Home(){
             <span>GoField</span>
           </div>
           <div className="footer-links">
-            <a href="#">Reservar</a>
-            <a href="#">Contactanos</a>
+            <p style={{ margin: 0, color: '#666' }}>
+              Contacto: <a href="mailto:gofield78@gmail.com" style={{ color: 'var(--verde-oscuro)', textDecoration: 'none' }}>gofield78@gmail.com</a>
+            </p>
           </div>
         </div>
       </footer>

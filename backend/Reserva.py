@@ -118,6 +118,8 @@ def listar_estado_reservas():
 def get_reserva(id):
     session = SessionLocal()
     try:
+        from database.mapeoCanchas import Cliente, DetalleReserva, Horario, CanchaxServicio, Cancha, Servicio
+        
         obj = session.get(Reserva, id)
         if not obj:
             return jsonify({'error': 'Not found'}), 404
@@ -131,6 +133,39 @@ def get_reserva(id):
                     d['fechaReservada'] = fr[:10]
         except Exception:
             pass
+        
+        # Include cliente info
+        if obj.idCliente:
+            cliente = session.get(Cliente, obj.idCliente)
+            if cliente:
+                d['cliente'] = _to_dict(cliente)
+        
+        # Include detalles with horario, cancha and servicio info
+        detalles = []
+        try:
+            det_rows = (
+                session.query(DetalleReserva, Horario, CanchaxServicio, Cancha, Servicio)
+                .outerjoin(Horario, DetalleReserva.idHorario == Horario.idHorario)
+                .outerjoin(CanchaxServicio, DetalleReserva.idCxS == CanchaxServicio.idCxS)
+                .outerjoin(Cancha, CanchaxServicio.idCancha == Cancha.idCancha)
+                .outerjoin(Servicio, CanchaxServicio.idServicio == Servicio.idServicio)
+                .filter(DetalleReserva.idReserva == obj.idReserva)
+                .all()
+            )
+            for det, horario, cvs, cancha, servicio in det_rows:
+                det_dict = _to_dict(det)
+                if horario:
+                    det_dict['horario'] = _to_dict(horario)
+                if cancha:
+                    det_dict['nombreCancha'] = cancha.nombre
+                    det_dict['idCancha'] = cancha.idCancha
+                if servicio:
+                    det_dict['servicio'] = _to_dict(servicio)
+                detalles.append(det_dict)
+        except Exception as e:
+            print(f"Error loading detalles: {e}")
+        
+        d['detalles'] = detalles
         return jsonify(d)
     finally:
         session.close()
@@ -213,5 +248,179 @@ def delete_reserva(id):
         session.execute(text("DELETE FROM Reserva WHERE idReserva = :id"), {"id": id})
         session.commit()
         return jsonify({'success': True})
+    finally:
+        session.close()
+
+
+@bp.route('/reservas/<int:id_reserva>/confirmar', methods=['GET', 'POST'])
+def confirmar_reserva(id_reserva):
+    """Endpoint para confirmar una reserva desde el email de recordatorio."""
+    session = SessionLocal()
+    try:
+        reserva = session.get(Reserva, id_reserva)
+        if not reserva:
+            return '''
+            <html>
+                <head><title>Reserva no encontrada</title></head>
+                <body style="font-family: Arial; text-align: center; padding: 50px;">
+                    <h1>❌ Reserva no encontrada</h1>
+                    <p>La reserva que intentas confirmar no existe o ya fue procesada.</p>
+                </body>
+            </html>
+            ''', 404
+        
+        # Cambiar estado a confirmada (idEstado = 2)
+        reserva.estado = 2
+        session.commit()
+        
+        return '''
+        <html>
+            <head>
+                <title>Reserva Confirmada</title>
+                <style>
+                    body { font-family: Arial, sans-serif; text-align: center; padding: 50px; background: #f0f8f0; }
+                    .container { max-width: 500px; margin: 0 auto; background: white; padding: 40px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+                    h1 { color: #4caf50; }
+                    .icon { font-size: 64px; margin: 20px 0; }
+                    .info { background: #f9f9f9; padding: 20px; margin: 20px 0; border-radius: 5px; text-align: left; }
+                    .label { font-weight: bold; color: #333; }
+                    a { display: inline-block; margin-top: 20px; padding: 12px 24px; background: #4a9d9c; color: white; text-decoration: none; border-radius: 5px; }
+                    a:hover { background: #2d6a6a; }
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="icon">✅</div>
+                    <h1>¡Reserva Confirmada!</h1>
+                    <p>Tu reserva ha sido confirmada exitosamente.</p>
+                    <div class="info">
+                        <p><span class="label">Número de reserva:</span> #''' + str(id_reserva) + '''</p>
+                        <p><span class="label">Estado:</span> Confirmada</p>
+                    </div>
+                    <p>Te esperamos en la cancha. ¡Que disfrutes tu partido!</p>
+                    <a href="/">Volver al inicio</a>
+                </div>
+            </body>
+        </html>
+        ''', 200
+        
+    except Exception as e:
+        session.rollback()
+        return f'''
+        <html>
+            <head><title>Error</title></head>
+            <body style="font-family: Arial; text-align: center; padding: 50px;">
+                <h1>❌ Error</h1>
+                <p>Ocurrió un error al confirmar la reserva: {str(e)}</p>
+            </body>
+        </html>
+        ''', 500
+    finally:
+        session.close()
+
+
+@bp.route('/reservas/<int:id_reserva>/cancelar', methods=['GET', 'POST'])
+def cancelar_reserva(id_reserva):
+    """Endpoint para cancelar una reserva desde el email de recordatorio."""
+    session = SessionLocal()
+    try:
+        reserva = session.get(Reserva, id_reserva)
+        if not reserva:
+            return '''
+            <html>
+                <head><title>Reserva no encontrada</title></head>
+                <body style="font-family: Arial; text-align: center; padding: 50px;">
+                    <h1>❌ Reserva no encontrada</h1>
+                    <p>La reserva que intentas cancelar no existe o ya fue procesada.</p>
+                </body>
+            </html>
+            ''', 404
+        
+        # Verificar que no esté muy cerca del horario (mínimo 2 horas antes)
+        from datetime import datetime, timedelta
+        from database.mapeoCanchas import DetalleReserva, Horario
+        
+        # Obtener el horario de la reserva
+        detalle = session.query(DetalleReserva).filter_by(idReserva=id_reserva).first()
+        if detalle and detalle.idHorario:
+            horario = session.get(Horario, detalle.idHorario)
+            if horario:
+                try:
+                    hora_partes = horario.horaInicio.split(':')
+                    hora_inicio = int(hora_partes[0])
+                    minuto_inicio = int(hora_partes[1]) if len(hora_partes) > 1 else 0
+                    
+                    fecha_hora_reserva = datetime.combine(
+                        reserva.fechaReservada,
+                        datetime.min.time().replace(hour=hora_inicio, minute=minuto_inicio)
+                    )
+                    
+                    time_until = fecha_hora_reserva - datetime.now()
+                    hours_until = time_until.total_seconds() / 3600
+                    
+                    if hours_until < 2:
+                        return '''
+                        <html>
+                            <head><title>Cancelación no permitida</title></head>
+                            <body style="font-family: Arial; text-align: center; padding: 50px; background: #fff8e1;">
+                                <div style="max-width: 500px; margin: 0 auto; background: white; padding: 40px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                                    <div style="font-size: 64px;">⚠️</div>
+                                    <h1 style="color: #ff9800;">Cancelación no permitida</h1>
+                                    <p>No se puede cancelar una reserva con menos de 2 horas de anticipación.</p>
+                                    <p>Por favor, contacta directamente con el establecimiento.</p>
+                                    <a href="/" style="display: inline-block; margin-top: 20px; padding: 12px 24px; background: #4a9d9c; color: white; text-decoration: none; border-radius: 5px;">Volver</a>
+                                </div>
+                            </body>
+                        </html>
+                        ''', 403
+                except Exception:
+                    pass  # Si no se puede verificar, permitir cancelación
+        
+        # Cambiar estado a cancelada (idEstado = 3)
+        reserva.estado = 3
+        session.commit()
+        
+        return '''
+        <html>
+            <head>
+                <title>Reserva Cancelada</title>
+                <style>
+                    body { font-family: Arial, sans-serif; text-align: center; padding: 50px; background: #ffebee; }
+                    .container { max-width: 500px; margin: 0 auto; background: white; padding: 40px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+                    h1 { color: #f44336; }
+                    .icon { font-size: 64px; margin: 20px 0; }
+                    .info { background: #f9f9f9; padding: 20px; margin: 20px 0; border-radius: 5px; text-align: left; }
+                    .label { font-weight: bold; color: #333; }
+                    a { display: inline-block; margin-top: 20px; padding: 12px 24px; background: #4a9d9c; color: white; text-decoration: none; border-radius: 5px; }
+                    a:hover { background: #2d6a6a; }
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="icon">❌</div>
+                    <h1>Reserva Cancelada</h1>
+                    <p>Tu reserva ha sido cancelada exitosamente.</p>
+                    <div class="info">
+                        <p><span class="label">Número de reserva:</span> #''' + str(id_reserva) + '''</p>
+                        <p><span class="label">Estado:</span> Cancelada</p>
+                    </div>
+                    <p>Si deseas realizar una nueva reserva, puedes hacerlo desde nuestro sistema.</p>
+                    <a href="/">Volver al inicio</a>
+                </div>
+            </body>
+        </html>
+        ''', 200
+        
+    except Exception as e:
+        session.rollback()
+        return f'''
+        <html>
+            <head><title>Error</title></head>
+            <body style="font-family: Arial; text-align: center; padding: 50px;">
+                <h1>❌ Error</h1>
+                <p>Ocurrió un error al cancelar la reserva: {str(e)}</p>
+            </body>
+        </html>
+        ''', 500
     finally:
         session.close()

@@ -230,7 +230,10 @@ export default function ProximasReservas(){
     <div style={{minHeight:'100vh', background:'#5a7d7c'}}>
       <header className="site-header">
         <div className="container header-inner">
-          <img src="/assets/logo.png" alt="logo" className="logo" />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <img src="/assets/logo.png" alt="logo" className="logo" />
+            <span style={{ fontSize: '24px', fontWeight: '700', color: 'var(--verde-oscuro)' }}>GoField</span>
+          </div>
           <nav className="nav">
             <div className="header-actions">
               <Link to="/dashboard" className="nav-link btn-calendar">Calendario</Link>
@@ -243,7 +246,7 @@ export default function ProximasReservas(){
                   <Link to="/empleados" className="nav-link btn-perfil">Empleados y Usuarios</Link>
                   <Link to="/clientes-admin" className="nav-link btn-perfil">Clientes</Link>
                   <Link to="/torneos-admin" className="nav-link btn-perfil">Torneos</Link>
-                  <Link to="/pagos" className="nav-link btn-perfil">Pagos</Link>
+                  <Link to="/pagos" className="nav-link btn-perfil">Ingresos</Link>
                   <Link to="/reportes" className="nav-link btn-perfil">Reportes</Link>
                 </>
               )}

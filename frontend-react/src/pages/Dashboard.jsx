@@ -56,15 +56,19 @@ export default function Dashboard(){
     <div className="dashboard-root">
       <header className="site-header">
         <div className="container header-inner">
-          <img src="/assets/logo.png" alt="logo" className="logo" />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <img src="/assets/logo.png" alt="logo" className="logo" />
+            <span style={{ fontSize: '24px', fontWeight: '700', color: 'var(--verde-oscuro)' }}>GoField</span>
+          </div>
           <nav className="nav">
             <div className="header-actions">
-              <Link to="/torneos-admin" className="nav-link btn-perfil">Torneos</Link>
               <Link to="/mis-reservas" className="nav-link btn-reservas">Mis Reservas</Link>
+              <Link to="/torneos-admin" className="nav-link btn-perfil">Torneos</Link>
               {userPermisos === 3 && (
                 <Link to="/reportes" className="nav-link btn-perfil">Reportes</Link>
               )}
               <Link to="/perfil" className="nav-link btn-perfil">Mi Perfil</Link>
+              <button onClick={handleLogout} className="btn btn-logout">Cerrar Sesión</button>
             </div>
           </nav>
         </div>
@@ -99,7 +103,9 @@ export default function Dashboard(){
         </div>
 
         <div className="dashboard-footer">
-          <button onClick={handleLogout} className="btn btn-logout">Cerrar Sesión</button>
+          <p style={{ textAlign: 'center', color: '#666', fontSize: '14px' }}>
+            Contacto: <a href="mailto:gofield78@gmail.com" style={{ color: 'var(--verde-oscuro)', textDecoration: 'none' }}>gofield78@gmail.com</a>
+          </p>
         </div>
       </main>
     </div>

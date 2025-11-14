@@ -55,6 +55,10 @@ export default function TorneosAdmin(){
   const [selectedClientes, setSelectedClientes] = useState([])
   const [showSuccessModal, setShowSuccessModal] = useState(false)
   const [teamName, setTeamName] = useState('')
+  const [editingPartido, setEditingPartido] = useState(null)
+  const [partidoResultado, setPartidoResultado] = useState('')
+  const [showResultadoModal, setShowResultadoModal] = useState(false)
+  const [showResultadoSuccessModal, setShowResultadoSuccessModal] = useState(false)
 
   useEffect(()=>{
     // Check permissions
@@ -347,6 +351,14 @@ export default function TorneosAdmin(){
     }
     
     const maxIntegrantes = detailTorneo?.maxIntegrantes || 5
+    
+    // Validar que el equipo tenga exactamente maxIntegrantes miembros
+    if (allClienteIds.length !== maxIntegrantes) {
+      setErrorMessage(`El equipo debe tener exactamente ${maxIntegrantes} integrantes (incluyéndote a ti). Actualmente tiene ${allClienteIds.length}.`)
+      setShowErrorModal(true)
+      return
+    }
+    
     if (allClienteIds.length > maxIntegrantes) {
       setErrorMessage(`El equipo no puede tener más de ${maxIntegrantes} integrantes (incluyéndote a ti)`)
       setShowErrorModal(true)
@@ -620,6 +632,45 @@ export default function TorneosAdmin(){
   const [showResultadoGenerar, setShowResultadoGenerar] = useState(false)
   const [resultadoGenerar, setResultadoGenerar] = useState(null)
 
+  function handleEditResultado(partido) {
+    setEditingPartido(partido)
+    setPartidoResultado(partido.resultado || '')
+    setShowResultadoModal(true)
+  }
+
+  async function handleSaveResultado() {
+    if (!editingPartido) return
+    
+    try {
+      const res = await fetch(`/api/partidos/${editingPartido.idPartido}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ resultado: partidoResultado })
+      })
+      
+      if (!res.ok) {
+        const err = await res.json()
+        alert('Error al actualizar resultado: ' + (err.error || 'Unknown'))
+        return
+      }
+      
+      // Refresh partidos
+      const partidosRes = await fetch(`/api/partidos?torneo=${detailTorneo.idTorneo}`)
+      if (partidosRes.ok) {
+        const partidosData = await partidosRes.json()
+        setPartidos(partidosData)
+      }
+      
+      setShowResultadoModal(false)
+      setEditingPartido(null)
+      setPartidoResultado('')
+      setShowResultadoSuccessModal(true)
+    } catch (e) {
+      console.error('Error saving resultado:', e)
+      alert('Error al guardar resultado')
+    }
+  }
+
   async function handleGenerarPartidos() {
     if (!detailTorneo) return
     setShowConfirmGenerar(true)
@@ -663,7 +714,10 @@ export default function TorneosAdmin(){
     <div style={{minHeight:'100vh', background:'var(--gris)'}}>
       <header className="site-header">
         <div className="container header-inner">
-          <img src="/assets/logo.png" alt="logo" className="logo" />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <img src="/assets/logo.png" alt="logo" className="logo" />
+            <span style={{ fontSize: '24px', fontWeight: '700', color: 'var(--verde-oscuro)' }}>GoField</span>
+          </div>
           <nav className="nav">
             <div className="header-actions">
               {isSupervisor && (
@@ -673,13 +727,13 @@ export default function TorneosAdmin(){
                   <Link to="/empleados" className="nav-link btn-perfil">Empleados y Usuarios</Link>
                   <Link to="/clientes-admin" className="nav-link btn-perfil">Clientes</Link>
                   <Link to="/torneos-admin" className="nav-link btn-perfil">Torneos</Link>
-                  <Link to="/pagos" className="nav-link btn-perfil">Pagos</Link>
+                  <Link to="/pagos" className="nav-link btn-perfil">Ingresos</Link>
                   <Link to="/reportes" className="nav-link btn-perfil">Reportes</Link>
                 </>
               )}
               {!isSupervisor && (
                 <>
-                  <Link to="/dashboard" className="nav-link btn-reservas">Reservar</Link>
+                  <Link to="/dashboard" className="nav-link btn-reservas">Calendario</Link>
                   <Link to="/torneos-admin" className="nav-link btn-perfil">Torneos</Link>
                   <Link to="/proximas-reservas" className="nav-link btn-calendar">Próxima Reserva</Link>
                 </>
@@ -1014,6 +1068,26 @@ export default function TorneosAdmin(){
             {/* Contenido de Equipos */}
             {activeTab === 'equipos' && (
               <>
+                {!isSupervisor && (
+                  <div style={{marginBottom:24}}>
+                    <button 
+                      onClick={handleAddTeamClick} 
+                      className="btn" 
+                      style={{padding:'12px 24px'}}
+                      disabled={!canAddTeam(detailTorneo)}
+                    >
+                      Agregar mi Equipo
+                    </button>
+                    {!canAddTeam(detailTorneo) && (
+                      <p style={{fontSize:14, color:'#d32f2f', marginTop:8}}>
+                        {isTorneoDisabled(getEstadoNombre(detailTorneo.estado)) 
+                          ? `No se pueden agregar equipos a torneos ${getEstadoNombre(detailTorneo.estado).toLowerCase()}`
+                          : 'No se pueden agregar equipos a partir del día anterior al inicio del torneo'}
+                      </p>
+                    )}
+                  </div>
+                )}
+
                 <h3 style={{fontSize:20, marginBottom:16, color:'var(--verde-oscuro)'}}>
                   Equipos Participantes
                 </h3>
@@ -1049,18 +1123,6 @@ export default function TorneosAdmin(){
                           {equipo.nombreEquipo}
                         </h4>
                         <div style={{display:'flex', gap:8}}>
-                          <button
-                            onClick={() => handleEditTeamClick(equipo)}
-                            className="btn"
-                            style={{
-                              padding:'8px 16px',
-                              background:'#406768',
-                              color:'white',
-                              fontSize:14
-                            }}
-                          >
-                            Editar
-                          </button>
                           {(permisos === 2 || permisos === 3) && (
                             <button
                               onClick={() => handleDeleteTeam(equipo)}
@@ -1087,26 +1149,6 @@ export default function TorneosAdmin(){
                     </div>
                   ))
                 })()}
-              </div>
-            )}
-
-            {!isSupervisor && (
-              <div style={{marginBottom:24}}>
-                <button 
-                  onClick={handleAddTeamClick} 
-                  className="btn" 
-                  style={{padding:'12px 24px'}}
-                  disabled={!canAddTeam(detailTorneo)}
-                >
-                  Agregar mi Equipo
-                </button>
-                {!canAddTeam(detailTorneo) && (
-                  <p style={{fontSize:14, color:'#d32f2f', marginTop:8}}>
-                    {isTorneoDisabled(getEstadoNombre(detailTorneo.estado)) 
-                      ? `No se pueden agregar equipos a torneos ${getEstadoNombre(detailTorneo.estado).toLowerCase()}`
-                      : 'No se pueden agregar equipos a partir del día anterior al inicio del torneo'}
-                  </p>
-                )}
               </div>
             )}
               </>
@@ -1147,6 +1189,20 @@ export default function TorneosAdmin(){
                           <h4 style={{fontSize:18, color:'var(--verde-oscuro)', margin:0}}>
                             {p.equipoLocal?.nombre || `Equipo #${p.equipoLocal}`} vs {p.equipoVisitante?.nombre || `Equipo #${p.equipoVisitante}`}
                           </h4>
+                          {(permisos === 2 || permisos === 3) && (
+                            <button
+                              onClick={() => handleEditResultado(p)}
+                              className="btn"
+                              style={{
+                                padding:'8px 16px',
+                                background:'var(--azul-oscuro)',
+                                color:'white',
+                                fontSize:14
+                              }}
+                            >
+                              Editar Resultado
+                            </button>
+                          )}
                         </div>
                         <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, fontSize:14}}>
                           <div>
@@ -1237,7 +1293,7 @@ export default function TorneosAdmin(){
             </div>
 
             <p style={{marginBottom:16, color:'#666', fontSize:14}}>
-              {selectedClientes.length} cliente(s) seleccionado(s) de {detailTorneo?.maxIntegrantes || 5} máximo
+              {selectedClientes.length} cliente(s) seleccionado(s) - Se requieren exactamente {detailTorneo?.maxIntegrantes || 5} integrantes
             </p>
 
             <div style={{display:'flex', gap:12}}>
@@ -1811,6 +1867,104 @@ export default function TorneosAdmin(){
           </div>
         </div>
       )}
+
+      {/* Edit Resultado Modal */}
+      {showResultadoModal && editingPartido && (
+        <div style={{position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1002}}>
+          <div style={{background:'white', borderRadius:12, padding:32, width:'90%', maxWidth:500}}>
+            <h2 style={{fontSize:24, marginBottom:24, color:'var(--verde-oscuro)'}}>
+              Editar Resultado del Partido
+            </h2>
+            
+            <div style={{marginBottom:16, padding:16, background:'#f9f9f9', borderRadius:8}}>
+              <p style={{fontSize:16, marginBottom:8}}>
+                <strong>{editingPartido.equipoLocal?.nombre || `Equipo #${editingPartido.equipoLocal}`}</strong> vs <strong>{editingPartido.equipoVisitante?.nombre || `Equipo #${editingPartido.equipoVisitante}`}</strong>
+              </p>
+              <p style={{fontSize:14, color:'#666', margin:0}}>
+                {editingPartido.fecha} - {editingPartido.horario ? `${editingPartido.horario.horaInicio} - ${editingPartido.horario.horaFin}` : 'N/A'}
+              </p>
+            </div>
+            
+            <div style={{marginBottom:24}}>
+              <label style={{display:'block', marginBottom:8, fontWeight:500}}>Resultado</label>
+              <input 
+                type="text"
+                value={partidoResultado}
+                onChange={e => setPartidoResultado(e.target.value)}
+                placeholder="Ej: 3-2, Equipo A ganó, etc."
+                style={{width:'100%', padding:12, border:'1px solid #ddd', borderRadius:4, fontSize:16}}
+              />
+            </div>
+
+            <div style={{display:'flex', gap:12}}>
+              <button onClick={handleSaveResultado} className="btn" style={{flex:1, padding:12, background:'var(--verde-oscuro)', color:'white'}}>
+                Guardar
+              </button>
+              <button onClick={() => {
+                setShowResultadoModal(false)
+                setEditingPartido(null)
+                setPartidoResultado('')
+              }} className="btn" style={{flex:1, padding:12, background:'#666'}}>
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Resultado Success Modal */}
+      {showResultadoSuccessModal && (
+        <div style={{position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1002}}>
+          <div style={{background:'linear-gradient(135deg, #19350C 0%, #687D31 100%)', borderRadius:16, padding:40, maxWidth:420, boxShadow:'0 20px 60px rgba(0,0,0,0.3)', border:'2px solid rgba(255,255,255,0.1)'}}>
+            <h2 style={{fontSize:28, marginBottom:20, color:'white', textAlign:'center', textTransform:'uppercase', letterSpacing:'2px', fontWeight:700}}>
+              Resultado Actualizado Exitosamente
+            </h2>
+            <div style={{textAlign:'center', marginBottom:28}}>
+              <div style={{
+                fontSize:64, 
+                color:'white',
+                background:'rgba(255,255,255,0.2)',
+                width:80,
+                height:80,
+                borderRadius:'50%',
+                display:'flex',
+                alignItems:'center',
+                justifyContent:'center',
+                margin:'0 auto',
+                border:'3px solid rgba(255,255,255,0.3)'
+              }}>✓</div>
+            </div>
+            <button 
+              onClick={() => setShowResultadoSuccessModal(false)} 
+              style={{
+                width:'100%',
+                padding:'14px 28px',
+                background:'rgba(255,255,255,0.25)',
+                border:'2px solid rgba(255,255,255,0.4)',
+                borderRadius:8,
+                color:'white',
+                fontSize:18,
+                fontWeight:700,
+                cursor:'pointer',
+                transition:'all 0.3s',
+                textTransform:'uppercase',
+                letterSpacing:'1px'
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.background = 'rgba(255,255,255,0.35)'
+                e.currentTarget.style.transform = 'scale(1.02)'
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.background = 'rgba(255,255,255,0.25)'
+                e.currentTarget.style.transform = 'scale(1)'
+              }}
+            >
+              Aceptar
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
+

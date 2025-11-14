@@ -52,6 +52,14 @@ export default function Reportes() {
       const canchaxServicios = await canchaxServiciosRes.json()
       const canchas = await canchasRes.json()
 
+      // Filtrar solo reservas hasta hoy (excluir futuras)
+      const hoy = new Date()
+      hoy.setHours(23, 59, 59, 999) // Incluir todo el día de hoy
+      const reservasPasadas = reservas.filter(r => {
+        const fechaReserva = new Date(r.fechaReservada)
+        return fechaReserva <= hoy
+      })
+
       // Crear mapas para acceso rápido
       const cxsMap = {}
       canchaxServicios.forEach(cxs => {
@@ -75,7 +83,7 @@ export default function Reportes() {
 
       // Calcular reservas por cliente
       const reservasPorClienteMap = {}
-      reservas.forEach(r => {
+      reservasPasadas.forEach(r => {
         const idCliente = r.idCliente
         if (!reservasPorClienteMap[idCliente]) {
           const cliente = clientes.find(c => c.idCliente === idCliente)
@@ -105,7 +113,7 @@ export default function Reportes() {
         }
       })
 
-      reservas.forEach(r => {
+      reservasPasadas.forEach(r => {
         const fechaReserva = new Date(r.fechaReservada)
         const idDeporte = reservaDeporteMap[r.idReserva]
 
@@ -133,7 +141,7 @@ export default function Reportes() {
       // Agrupar ganancias por día
       const gananciasPorFecha = {}
       
-      reservas.forEach(r => {
+      reservasPasadas.forEach(r => {
         const fechaReserva = new Date(r.fechaReservada)
         const monto = r.monto || 0
         const fechaKey = r.fechaReservada // formato YYYY-MM-DD
@@ -287,10 +295,30 @@ export default function Reportes() {
             margin: 0 auto;
           }
           .header {
-            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
             margin-bottom: 30px;
             border-bottom: 3px solid #19350C;
             padding-bottom: 20px;
+          }
+          .header .logo-section {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+          }
+          .header .logo-section img {
+            height: 60px;
+            width: auto;
+          }
+          .header .logo-section .empresa-nombre {
+            font-size: 20px;
+            font-weight: 700;
+            color: #19350C;
+          }
+          .header .titulo-section {
+            flex: 1;
+            text-align: center;
           }
           .header h1 {
             color: #19350C;
@@ -398,8 +426,14 @@ export default function Reportes() {
         <button class="btn-imprimir no-print" onclick="window.print()">🖨️ Imprimir</button>
         
         <div class="header">
-          <h1>${titulo}</h1>
-          <div class="info">Generado el ${fechaActual}</div>
+          <div class="logo-section">
+            <img src="/assets/logo.png" alt="GoField Logo" />
+            <div class="empresa-nombre">GoField</div>
+          </div>
+          <div class="titulo-section">
+            <h1>${titulo}</h1>
+            <div class="info">Generado el ${fechaActual}</div>
+          </div>
         </div>
         
         ${tipo !== 'utilizacion-mensual' ? `
@@ -712,7 +746,10 @@ export default function Reportes() {
     <div style={{ minHeight: '100vh', background: 'var(--gris)' }}>
       <header className="site-header">
         <div className="container header-inner">
-          <img src="/assets/logo.png" alt="logo" className="logo" />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <img src="/assets/logo.png" alt="logo" className="logo" />
+            <span style={{ fontSize: '24px', fontWeight: '700', color: 'var(--verde-oscuro)' }}>GoField</span>
+          </div>
           <nav className="nav">
             <div className="header-actions">
               <Link to="/proximas-reservas" className="nav-link btn-calendar">Próximas Reservas</Link>
@@ -720,7 +757,7 @@ export default function Reportes() {
               <Link to="/empleados" className="nav-link btn-perfil">Empleados y Usuarios</Link>
               <Link to="/clientes-admin" className="nav-link btn-perfil">Clientes</Link>
               <Link to="/torneos-admin" className="nav-link btn-perfil">Torneos</Link>
-              <Link to="/pagos" className="nav-link btn-perfil">Pagos</Link>
+              <Link to="/pagos" className="nav-link btn-perfil">Ingresos</Link>
               <Link to="/reportes" className="nav-link btn-perfil">Reportes</Link>
               <Link to="/perfil" className="nav-link btn-perfil">Mi Perfil</Link>
               <button onClick={handleLogout} className="btn btn-logout">Cerrar Sesión</button>
@@ -738,16 +775,16 @@ export default function Reportes() {
           <p style={{ textAlign: 'center', fontSize: 18 }}>Cargando datos...</p>
         ) : (
           <div style={{ display: 'grid', gap: 32 }}>
-            {/* Primera fila: Reservas por Cliente y Reservas por Deporte */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 32 }}>
+            {/* Primera fila: 3 gráficos lado a lado */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 24 }}>
             {/* Gráfico de Torta - Reservas por Cliente */}
-            <div style={{ background: 'white', borderRadius: 12, padding: 32, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
-              <h2 style={{ fontSize: 24, marginBottom: 24, color: 'var(--verde-oscuro)' }}>
+            <div style={{ background: 'white', borderRadius: 12, padding: 24, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+              <h2 style={{ fontSize: 20, marginBottom: 16, color: 'var(--verde-oscuro)' }}>
                 Reservas por Cliente
               </h2>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 24, alignItems: 'center' }}>
-                <div style={{ flex: '1 1 300px', minWidth: 300 }}>
-                  <svg viewBox="0 0 200 200" style={{ width: '100%', maxWidth: 400 }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, alignItems: 'center' }}>
+                <div style={{ flex: '1 1 200px', minWidth: 200 }}>
+                  <svg viewBox="0 0 200 200" style={{ width: '100%', maxWidth: 300 }}>
                     {reservasPorCliente.length > 0 ? (() => {
                       const total = reservasPorCliente.reduce((sum, c) => sum + c.cantidad, 0)
                       let currentAngle = 0
@@ -781,31 +818,31 @@ export default function Reportes() {
                       })
                     })() : <text x="100" y="100" textAnchor="middle" fill="#666">No hay datos</text>}
                   </svg>
-                  <p style={{ textAlign: 'center', fontSize: 18, fontWeight: 600, marginTop: 16, color: '#333' }}>
+                  <p style={{ textAlign: 'center', fontSize: 16, fontWeight: 600, marginTop: 12, color: '#333' }}>
                     Total: {reservasPorCliente.reduce((sum, c) => sum + c.cantidad, 0)} reservas
                   </p>
                 </div>
-                <div style={{ flex: '1 1 200px' }}>
-                  {reservasPorCliente.map((cliente, idx) => (
-                    <div key={idx} style={{ display: 'flex', alignItems: 'center', marginBottom: 12 }}>
-                      <div style={{ width: 20, height: 20, background: COLORS[idx % COLORS.length], marginRight: 12, borderRadius: 4 }}></div>
-                      <span style={{ fontSize: 14 }}>{cliente.nombre}: {cliente.cantidad}</span>
+                <div style={{ flex: '1 1 150px' }}>
+                  {reservasPorCliente.slice(0, 5).map((cliente, idx) => (
+                    <div key={idx} style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
+                      <div style={{ width: 16, height: 16, background: COLORS[idx % COLORS.length], marginRight: 8, borderRadius: 3 }}></div>
+                      <span style={{ fontSize: 12 }}>{cliente.nombre}: {cliente.cantidad}</span>
                     </div>
                   ))}
                 </div>
               </div>
             </div>
 
-            {/* Gráfico de Barras - Reservas por Deporte */}
-            <div style={{ background: 'white', borderRadius: 12, padding: 32, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-                <h2 style={{ fontSize: 24, margin: 0, color: 'var(--verde-oscuro)' }}>
-                  Reservas por Deporte
+            {/* Gráfico de Ingresos */}
+            <div style={{ background: 'white', borderRadius: 12, padding: 24, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                <h2 style={{ fontSize: 20, margin: 0, color: 'var(--verde-oscuro)' }}>
+                  Ingresos del Negocio
                 </h2>
                 <select
-                  value={periodoReservas}
-                  onChange={(e) => setPeriodoReservas(e.target.value)}
-                  style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #ddd', fontSize: 14 }}
+                  value={periodoGanancias}
+                  onChange={(e) => setPeriodoGanancias(e.target.value)}
+                  style={{ padding: '6px 12px', borderRadius: 6, border: '1px solid #ddd', fontSize: 13 }}
                 >
                   <option value="semana">Últimos 7 días</option>
                   <option value="mes">Último mes</option>
@@ -813,15 +850,159 @@ export default function Reportes() {
                   <option value="total">Total</option>
                 </select>
               </div>
-              <div style={{ minHeight: 300 }}>
+
+              {/* Gráfico de barras */}
+              <div style={{ minHeight: 250 }}>
+                {(() => {
+                  // Filtrar datos según el período seleccionado
+                  const ahora = new Date()
+                  let fechaInicio
+                  let labelPeriodo = 'Últimos 7 días'
+                  let agruparPor = 'dia' // dia, semana, mes
+                  
+                  if (periodoGanancias === 'semana') {
+                    fechaInicio = new Date(ahora.getTime() - 7 * 24 * 60 * 60 * 1000)
+                    labelPeriodo = 'Últimos 7 días'
+                    agruparPor = 'dia'
+                  } else if (periodoGanancias === 'mes') {
+                    fechaInicio = new Date(ahora.getTime() - 30 * 24 * 60 * 60 * 1000)
+                    labelPeriodo = 'Últimos 30 días'
+                    agruparPor = 'semana'
+                  } else if (periodoGanancias === 'anio') {
+                    fechaInicio = new Date(ahora.getFullYear(), 0, 1)
+                    labelPeriodo = 'Este año'
+                    agruparPor = 'mes'
+                  } else {
+                    fechaInicio = new Date(0)
+                    labelPeriodo = 'Total histórico'
+                    agruparPor = 'mes'
+                  }
+
+                  // Filtrar datos del período
+                  const datosFiltrados = gananciasPorDia.filter(d => d.fecha >= fechaInicio)
+                  
+                  if (datosFiltrados.length === 0) {
+                    return (
+                      <div style={{ textAlign: 'center', padding: 40, color: '#666' }}>
+                        No hay datos de ingresos para este período
+                      </div>
+                    )
+                  }
+
+                  // Agrupar datos según el período
+                  let datosAgrupados = []
+                  
+                  if (agruparPor === 'dia') {
+                    // Mostrar por día
+                    datosAgrupados = datosFiltrados.map(d => ({
+                      label: `${d.fecha.getDate()}/${d.fecha.getMonth() + 1}`,
+                      monto: d.monto
+                    }))
+                  } else if (agruparPor === 'semana') {
+                    // Agrupar por semana
+                    const semanas = {}
+                    datosFiltrados.forEach(d => {
+                      const weekStart = new Date(d.fecha)
+                      weekStart.setDate(weekStart.getDate() - weekStart.getDay())
+                      const weekKey = `${weekStart.getDate()}/${weekStart.getMonth() + 1}`
+                      
+                      if (!semanas[weekKey]) {
+                        semanas[weekKey] = { label: weekKey, monto: 0 }
+                      }
+                      semanas[weekKey].monto += d.monto
+                    })
+                    datosAgrupados = Object.values(semanas)
+                  } else {
+                    // Agrupar por mes
+                    const meses = {}
+                    const nombresMeses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
+                    datosFiltrados.forEach(d => {
+                      const mesKey = `${nombresMeses[d.fecha.getMonth()]}`
+                      
+                      if (!meses[mesKey]) {
+                        meses[mesKey] = { label: mesKey, monto: 0, orden: d.fecha.getMonth() }
+                      }
+                      meses[mesKey].monto += d.monto
+                    })
+                    datosAgrupados = Object.values(meses).sort((a, b) => a.orden - b.orden)
+                  }
+
+                  const maxMonto = Math.max(...datosAgrupados.map(d => d.monto), 1)
+                  const totalIngresos = datosAgrupados.reduce((sum, d) => sum + d.monto, 0)
+
+                  return (
+                    <div>
+                      <div style={{ fontSize: 12, color: '#666', marginBottom: 6, textAlign: 'center' }}>
+                        {labelPeriodo} - Total: ${totalIngresos.toFixed(2)}
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'flex-end', gap: datosAgrupados.length > 12 ? 2 : 6, height: 200, padding: '0 10px' }}>
+                        {datosAgrupados.map((dato, idx) => {
+                          const height = (dato.monto / maxMonto) * 160
+                          return (
+                            <div key={idx} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: datosAgrupados.length > 20 ? 8 : 15 }}>
+                              <div style={{ fontSize: 9, fontWeight: 600, marginBottom: 3, color: '#333', whiteSpace: 'nowrap', transform: 'rotate(-45deg)', transformOrigin: 'bottom center' }}>
+                                ${(dato.monto / 1000).toFixed(1)}k
+                              </div>
+                              <div
+                                style={{
+                                  width: '100%',
+                                  height: height || 5,
+                                  background: 'linear-gradient(180deg, #6FA9BB 0%, #406768 100%)',
+                                  borderRadius: '3px 3px 0 0',
+                                  transition: 'all 0.3s',
+                                  cursor: 'pointer',
+                                  boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+                                }}
+                                onMouseEnter={(e) => {
+                                  e.currentTarget.style.transform = 'scaleY(1.05)'
+                                  e.currentTarget.style.filter = 'brightness(1.1)'
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.transform = 'scaleY(1)'
+                                  e.currentTarget.style.filter = 'brightness(1)'
+                                }}
+                                title={`$${dato.monto.toFixed(2)}`}
+                              ></div>
+                              <div style={{ fontSize: 9, marginTop: 4, textAlign: 'center', color: '#666' }}>
+                                {dato.label}
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )
+                })()}
+              </div>
+            </div>
+          </div>
+
+            {/* Gráfico de Barras - Reservas por Deporte */}
+            <div style={{ background: 'white', borderRadius: 12, padding: 24, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                <h2 style={{ fontSize: 20, margin: 0, color: 'var(--verde-oscuro)' }}>
+                  Reservas por Deporte
+                </h2>
+                <select
+                  value={periodoReservas}
+                  onChange={(e) => setPeriodoReservas(e.target.value)}
+                  style={{ padding: '6px 12px', borderRadius: 6, border: '1px solid #ddd', fontSize: 13 }}
+                >
+                  <option value="semana">Últimos 7 días</option>
+                  <option value="mes">Último mes</option>
+                  <option value="anio">Este año</option>
+                  <option value="total">Total</option>
+                </select>
+              </div>
+              <div style={{ minHeight: 250 }}>
                 {reservasPorDeporte[periodoReservas].length > 0 ? (
-                  <div style={{ display: 'flex', alignItems: 'flex-end', gap: 16, height: 300 }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-end', gap: 12, height: 250 }}>
                     {reservasPorDeporte[periodoReservas].map((deporte, idx) => {
                       const maxCantidad = Math.max(...reservasPorDeporte[periodoReservas].map(d => d.cantidad), 1)
-                      const height = (deporte.cantidad / maxCantidad) * 250
+                      const height = (deporte.cantidad / maxCantidad) * 200
                       return (
                         <div key={idx} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                          <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 8, color: '#333' }}>
+                          <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6, color: '#333' }}>
                             {deporte.cantidad}
                           </div>
                           <div
@@ -829,11 +1010,11 @@ export default function Reportes() {
                               width: '100%',
                               height: height || 5,
                               background: COLORS[idx % COLORS.length],
-                              borderRadius: '8px 8px 0 0',
+                              borderRadius: '6px 6px 0 0',
                               transition: 'height 0.3s'
                             }}
                           ></div>
-                          <div style={{ fontSize: 12, marginTop: 8, textAlign: 'center', color: '#666' }}>
+                          <div style={{ fontSize: 11, marginTop: 6, textAlign: 'center', color: '#666' }}>
                             {deporte.nombre}
                           </div>
                         </div>
@@ -845,191 +1026,9 @@ export default function Reportes() {
                 )}
               </div>
             </div>
-            </div>
-
-            {/* Gráfico de Ganancias */}
-            <div style={{ background: 'white', borderRadius: 12, padding: 32, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-                <h2 style={{ fontSize: 24, margin: 0, color: 'var(--verde-oscuro)' }}>
-                  Ganancias del Negocio
-                </h2>
-                <select
-                  value={periodoGanancias}
-                  onChange={(e) => setPeriodoGanancias(e.target.value)}
-                  style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #ddd', fontSize: 14 }}
-                >
-                  <option value="semana">Últimos 7 días</option>
-                  <option value="mes">Último mes</option>
-                  <option value="anio">Este año</option>
-                  <option value="total">Total</option>
-                </select>
-              </div>
-              
-              {/* Cards de resumen en la parte superior */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 32 }}>
-                <div style={{ background: '#f8f9fa', borderRadius: 8, padding: 16, textAlign: 'center', border: '2px solid #e9ecef' }}>
-                  <div style={{ fontSize: 12, color: '#666', marginBottom: 4 }}>Últimos 7 días</div>
-                  <div style={{ fontSize: 20, fontWeight: 700, color: '#333' }}>${ganancias.semana.toFixed(2)}</div>
-                </div>
-                <div style={{ background: '#f8f9fa', borderRadius: 8, padding: 16, textAlign: 'center', border: '2px solid #e9ecef' }}>
-                  <div style={{ fontSize: 12, color: '#666', marginBottom: 4 }}>Último mes</div>
-                  <div style={{ fontSize: 20, fontWeight: 700, color: '#333' }}>${ganancias.mes.toFixed(2)}</div>
-                </div>
-                <div style={{ background: '#f8f9fa', borderRadius: 8, padding: 16, textAlign: 'center', border: '2px solid #e9ecef' }}>
-                  <div style={{ fontSize: 12, color: '#666', marginBottom: 4 }}>Este año</div>
-                  <div style={{ fontSize: 20, fontWeight: 700, color: '#333' }}>${ganancias.anio.toFixed(2)}</div>
-                </div>
-                <div style={{ background: '#f8f9fa', borderRadius: 8, padding: 16, textAlign: 'center', border: '2px solid #e9ecef' }}>
-                  <div style={{ fontSize: 12, color: '#666', marginBottom: 4 }}>Total histórico</div>
-                  <div style={{ fontSize: 20, fontWeight: 700, color: '#333' }}>${ganancias.total.toFixed(2)}</div>
-                </div>
-              </div>
-
-              {/* Gráfico de líneas */}
-              <div style={{ minHeight: 300, position: 'relative' }}>
-                {(() => {
-                  // Filtrar datos según el período seleccionado
-                  const ahora = new Date()
-                  let fechaInicio
-                  let labelPeriodo = 'Últimos 7 días'
-                  
-                  if (periodoGanancias === 'semana') {
-                    fechaInicio = new Date(ahora.getTime() - 7 * 24 * 60 * 60 * 1000)
-                    labelPeriodo = 'Últimos 7 días'
-                  } else if (periodoGanancias === 'mes') {
-                    fechaInicio = new Date(ahora.getTime() - 30 * 24 * 60 * 60 * 1000)
-                    labelPeriodo = 'Últimos 30 días'
-                  } else if (periodoGanancias === 'anio') {
-                    fechaInicio = new Date(ahora.getFullYear(), 0, 1)
-                    labelPeriodo = 'Este año'
-                  } else {
-                    fechaInicio = new Date(0) // Desde el principio
-                    labelPeriodo = 'Total histórico'
-                  }
-
-                  // Filtrar datos del período
-                  const datosFiltrados = gananciasPorDia.filter(d => d.fecha >= fechaInicio)
-                  
-                  if (datosFiltrados.length === 0) {
-                    return (
-                      <div style={{ textAlign: 'center', padding: 40, color: '#666' }}>
-                        No hay datos de ganancias para este período
-                      </div>
-                    )
-                  }
-
-                  const width = 100
-                  const height = 60
-                  const padding = 8
-                  const leftPadding = 12
-
-                  const maxGanancia = Math.min(150000, Math.max(...datosFiltrados.map(d => d.monto), 1))
-
-                  return (
-                    <div>
-                      <div style={{ fontSize: 14, color: '#666', marginBottom: 16, textAlign: 'center' }}>
-                        Ingresos ($) - {labelPeriodo}
-                      </div>
-                      <svg viewBox={`0 0 ${width} ${height}`} style={{ width: '100%', height: 250, background: '#fafbfc', borderRadius: 8, border: '1px solid #e9ecef' }}>
-                        {/* Grid lines y labels del eje Y */}
-                        {[0, 1, 2, 3, 4].map(i => {
-                          const yPos = padding + (height - 2 * padding) * i / 4
-                          const valor = (maxGanancia * (4 - i) / 4).toFixed(0)
-                          return (
-                            <g key={i}>
-                              <line
-                                x1={leftPadding}
-                                y1={yPos}
-                                x2={width - padding}
-                                y2={yPos}
-                                stroke="#e9ecef"
-                                strokeWidth="0.2"
-                              />
-                              <text
-                                x={leftPadding - 1}
-                                y={yPos}
-                                fontSize="2.5"
-                                fill="#666"
-                                textAnchor="end"
-                                dominantBaseline="middle"
-                              >
-                                ${valor}
-                              </text>
-                            </g>
-                          )
-                        })}
-                        
-                        {/* Línea de ganancias reales */}
-                        <polyline
-                          points={datosFiltrados.map((dato, i) => {
-                            const x = leftPadding + (width - leftPadding - padding) * i / (datosFiltrados.length - 1 || 1)
-                            const y = height - padding - (height - 2 * padding) * (dato.monto / maxGanancia)
-                            return `${x},${y}`
-                          }).join(' ')}
-                          fill="none"
-                          stroke="#6FA9BB"
-                          strokeWidth="0.5"
-                        />
-                        
-                        {/* Área bajo la curva */}
-                        <polygon
-                          points={
-                            datosFiltrados.map((dato, i) => {
-                              const x = leftPadding + (width - leftPadding - padding) * i / (datosFiltrados.length - 1 || 1)
-                              const y = height - padding - (height - 2 * padding) * (dato.monto / maxGanancia)
-                              return `${x},${y}`
-                            }).join(' ') + ` ${width - padding},${height - padding} ${leftPadding},${height - padding}`
-                          }
-                          fill="rgba(111, 169, 187, 0.1)"
-                        />
-
-                        {/* Puntos en la línea */}
-                        {datosFiltrados.map((dato, i) => {
-                          const x = leftPadding + (width - leftPadding - padding) * i / (datosFiltrados.length - 1 || 1)
-                          const y = height - padding - (height - 2 * padding) * (dato.monto / maxGanancia)
-                          return (
-                            <circle
-                              key={i}
-                              cx={x}
-                              cy={y}
-                              r="0.4"
-                              fill="#406768"
-                            />
-                          )
-                        })}
-
-                        {/* Labels del eje X (fechas) - mostrar máximo 7 fechas */}
-                        {Array.from({ length: Math.min(datosFiltrados.length, 7) }, (_, i) => {
-                          const step = Math.max(1, Math.floor(datosFiltrados.length / Math.min(datosFiltrados.length, 6)))
-                          const index = Math.min(i * step, datosFiltrados.length - 1)
-                          const dato = datosFiltrados[index]
-                          
-                          const x = leftPadding + (width - leftPadding - padding) * index / (datosFiltrados.length - 1 || 1)
-                          const dia = dato.fecha.getDate()
-                          const mes = dato.fecha.getMonth() + 1
-                          
-                          return (
-                            <text
-                              key={i}
-                              x={x}
-                              y={height - 2}
-                              fontSize="2"
-                              fill="#666"
-                              textAnchor="middle"
-                            >
-                              {dia}/{mes}
-                            </text>
-                          )
-                        })}
-                      </svg>
-                    </div>
-                  )
-                })()}
-              </div>
-            </div>
 
             {/* Sección de Reportes Imprimibles */}
-            <div style={{ background: 'white', borderRadius: 12, padding: 32, boxShadow: '0 2px 8px rgba(0,0,0,0.1)', marginTop: 32 }}>
+            <div style={{ background: 'white', borderRadius: 12, padding: 32, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
               <h2 style={{ fontSize: 24, marginBottom: 24, color: 'var(--verde-oscuro)', borderBottom: '2px solid #e9ecef', paddingBottom: 16 }}>
                 Reportes Imprimibles
               </h2>

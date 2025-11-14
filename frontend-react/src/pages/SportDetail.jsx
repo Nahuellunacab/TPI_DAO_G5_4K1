@@ -191,7 +191,10 @@ export default function SportDetail(){
     <div className="sport-detail-root">
       <header className="site-header">
         <div className="container header-inner">
-          <img src="/assets/logo.png" alt="logo" className="logo" />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <img src="/assets/logo.png" alt="logo" className="logo" />
+            <span style={{ fontSize: '24px', fontWeight: '700', color: 'var(--verde-oscuro)' }}>GoField</span>
+          </div>
           <div className="header-actions">
             <Link to="/mis-reservas" className="nav-link btn-reservas">Mis Reservas</Link>
             <Link to="/perfil" className="nav-link btn-perfil">Mi Perfil</Link>

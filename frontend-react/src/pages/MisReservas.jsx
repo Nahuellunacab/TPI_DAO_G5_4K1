@@ -169,10 +169,13 @@ export default function MisReservas(){
     <div className="reservas-root">
       <header className="site-header">
         <div className="container header-inner">
-          <img src="/assets/logo.png" alt="logo" className="logo" />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <img src="/assets/logo.png" alt="logo" className="logo" />
+            <span style={{ fontSize: '24px', fontWeight: '700', color: 'var(--verde-oscuro)' }}>GoField</span>
+          </div>
           <nav className="nav">
             <div className="header-actions">
-              <Link to="/dashboard" className="nav-link btn-reservas">{permisos === 3 ? 'Calendario' : 'Reservar'}</Link>
+              <Link to="/dashboard" className="nav-link btn-reservas">Volver</Link>
               <Link to="/torneos-admin" className="nav-link btn-perfil">Torneos</Link>
               <Link to="/perfil" className="nav-link btn-perfil">Mi Perfil</Link>
               <button onClick={() => { try{ localStorage.removeItem('token'); localStorage.removeItem('user'); localStorage.removeItem('auth'); } finally { navigate('/') } }} className="btn btn-logout">Cerrar Sesión</button>
@@ -276,11 +279,21 @@ export default function MisReservas(){
             )
           })}
         </div>
-
-          <div style={{display:'flex', justifyContent:'center', marginTop:28}}>
-            <Link to="/dashboard" className="btn btn-outline btn-back">Volver</Link>
-          </div>
       </main>
+      
+      <footer className="site-footer">
+        <div className="container footer-inner">
+          <div className="brand">
+            <img src="/assets/logo.png" alt="logo" className="logo-small" />
+            <span>GoField</span>
+          </div>
+          <div className="footer-links">
+            <p style={{ margin: 0, color: '#666' }}>
+              Contacto: <a href="mailto:gofield78@gmail.com" style={{ color: 'var(--verde-oscuro)', textDecoration: 'none' }}>gofield78@gmail.com</a>
+            </p>
+          </div>
+        </div>
+      </footer>
       {/* Edit modal */}
       {showEditModal && editingReserva && (
         <div className="modal-overlay">

@@ -288,12 +288,12 @@ export default function Reservas(){
     return selectedBlock.horarios.some(h => Number(h.idHorario) === Number(horario.idHorario))
   }
 
-  function handleSuggestedClick(date, horario){
+  async function handleSuggestedClick(date, horario){
     const n = Number(requestedTurns) || 1
     const block = buildBlockFromStart(date, horario, n)
     if (!block){ setBlockError('No es posible seleccionar ese bloque (ocupado o fuera de rango)'); return }
-    setTempPendingBlock(block)
-    setShowSelectModal(true)
+    // Instead of showing a confirmation modal, directly open the reservation modal
+    await openBlockReservationModalDirect(block)
   }
 
   // Build a block starting from the clicked horario and going downwards for n turnos
@@ -628,6 +628,67 @@ export default function Reservas(){
     }
   }
 
+  // Direct version that accepts a block parameter
+  async function openBlockReservationModalDirect(block){
+    if (!block) return
+    // preload cancha and servicios
+    try{
+      const [cRes, sRes] = await Promise.all([
+        fetch(`/api/canchas/${idCancha}`),
+        fetch(`/api/canchaxservicio/cancha/${idCancha}`)
+      ])
+      const cancha = cRes.ok ? await cRes.json() : null
+      const servicios = sRes.ok ? await sRes.json() : []
+      const tRes = await fetch('/api/tipos-documento')
+      const tiposDocumento = tRes.ok ? await tRes.json() : []
+      // Try to fetch full cliente info from session (if available)
+      let cliente = null
+      try{
+        const raw = (()=>{ try{ const r = localStorage.getItem('user'); return r ? JSON.parse(r) : null }catch(e){ return null } })()
+        if (raw && raw.idCliente){
+          const clRes = await fetch(`/api/clientes/${raw.idCliente}`)
+          if (clRes.ok) cliente = await clRes.json()
+        }
+      }catch(e){ console.warn('No se pudo obtener cliente desde API', e) }
+
+  const fechaReservada = toYMD(parseLocalDate(block.startDate))
+  // determine techada and pre-select iluminación if needed
+      let isTechadaBlk = false
+      try{
+        const estadoName = (cancha && cancha.estado) ? (estadosMap[cancha.estado] || '') : ''
+        const key = (estadoName + ' ' + (cancha && cancha.nombre ? cancha.nombre : '')).toLowerCase()
+        if (key.indexOf('tech') >= 0 || key.indexOf('techa') >= 0 || key.indexOf('cubiert') >= 0 || key.indexOf('cerrad') >= 0) isTechadaBlk = true
+      }catch(e){ isTechadaBlk = false }
+      const initialServicesBlk = []
+      let requiresIluminacionBlk = isTechadaBlk
+      try{
+        // check first horario hour
+        const horaStr = block.horarios && block.horarios[0] && typeof block.horarios[0].horaInicio === 'string' ? block.horarios[0].horaInicio : ''
+        if (horaStr){
+          const parts = horaStr.split(':')
+          const hora = Number(parts[0]) || 0
+          // For any sport, after 18:00 we require iluminación
+          if (hora >= 18) requiresIluminacionBlk = true
+        }
+      }catch(e){}
+      try{
+        if (requiresIluminacionBlk && Array.isArray(servicios)){
+            for(const s of modalVisibleServices(servicios)){
+              try{ const desc = (s.servicio && s.servicio.descripcion) ? s.servicio.descripcion.toLowerCase() : ''; if (desc.indexOf('ilumin') >= 0 || desc.indexOf('luz') >= 0){ initialServicesBlk.push(Number(s.idCxS)); break } }catch(e){}
+            }
+          }
+      }catch(e){}
+      // Set modal data and open
+      setModalSelectedServices(initialServicesBlk)
+      setSelectedSlot({ date: parseLocalDate(block.startDate), fechaReservada, horario: block.horarios[0], cancha, servicios, cliente, tiposDocumento, blockHorarios: block.horarios, isTechada: isTechadaBlk, requiresIluminacion: requiresIluminacionBlk })
+      setShowModal(true)
+      // Store the selected block for later use
+      setSelectedBlock(block)
+    }catch(e){
+      console.error('Error cargando datos para bloque', e)
+    }
+  }
+
   function changeWeek(offset){
     const s = new Date(weekStart)
     s.setDate(s.getDate() + offset*7)
@@ -660,12 +721,16 @@ export default function Reservas(){
     <div className="reservas-root">
       <header className="site-header">
         <div className="container header-inner">
-          <img src="/assets/logo.png" alt="logo" className="logo" />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <img src="/assets/logo.png" alt="logo" className="logo" />
+            <span style={{ fontSize: '24px', fontWeight: '700', color: 'var(--verde-oscuro)' }}>GoField</span>
+          </div>
           <nav className="nav">
             <div className="header-actions">
+              <Link to="/dashboard" className="nav-link btn-reservas">Volver</Link>
               <Link to="/mis-reservas" className="nav-link btn-reservas">Mis Reservas</Link>
               <Link to="/perfil" className="nav-link btn-perfil">Mi Perfil</Link>
-              <button onClick={() => { try{ localStorage.removeItem('token'); localStorage.removeItem('user'); localStorage.removeItem('auth'); } finally { navigate('/') } }} className="btn btn-logout">Cerrar Sesión</button>
+              <button onClick={handleLogout} className="btn btn-logout">Cerrar Sesión</button>
             </div>
           </nav>
         </div>
@@ -949,8 +1014,9 @@ export default function Reservas(){
             <span>GoField</span>
           </div>
           <div className="footer-links">
-            <Link to="/dashboard" className="btn btn-reservas">volver</Link>
-            <button className="btn btn-logout" onClick={handleLogout}>Cerrar Sesión</button>
+            <p style={{ margin: 0, color: '#666' }}>
+              Contacto: <a href="mailto:gofield78@gmail.com" style={{ color: 'var(--verde-oscuro)', textDecoration: 'none' }}>gofield78@gmail.com</a>
+            </p>
           </div>
         </div>
       </footer>

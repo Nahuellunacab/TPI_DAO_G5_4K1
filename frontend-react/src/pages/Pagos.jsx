@@ -117,7 +117,10 @@ export default function Pagos() {
     <div style={{ minHeight: '100vh', background: '#f1f5f9' }}>
       <header className="site-header">
         <div className="container header-inner">
-          <img src="/assets/logo.png" alt="logo" className="logo" />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <img src="/assets/logo.png" alt="logo" className="logo" />
+            <span style={{ fontSize: '24px', fontWeight: '700', color: 'var(--verde-oscuro)' }}>GoField</span>
+          </div>
           <nav className="nav">
             <div className="header-actions">
               <Link to="/dashboard" className="nav-link btn-calendar">Calendario</Link>
@@ -126,7 +129,7 @@ export default function Pagos() {
               <Link to="/empleados" className="nav-link btn-perfil">Empleados y Usuarios</Link>
               <Link to="/clientes-admin" className="nav-link btn-perfil">Clientes</Link>
               <Link to="/torneos-admin" className="nav-link btn-perfil">Torneos</Link>
-              <Link to="/pagos" className="nav-link btn-perfil">Pagos</Link>
+              <Link to="/pagos" className="nav-link btn-perfil">Ingresos</Link>
               <Link to="/reportes" className="nav-link btn-perfil">Reportes</Link>
               <Link to="/perfil" className="nav-link btn-perfil">Mi Perfil</Link>
               <button onClick={handleLogout} className="btn btn-logout">Cerrar Sesión</button>
@@ -136,55 +139,23 @@ export default function Pagos() {
       </header>
 
       <main style={{ paddingTop: '120px', paddingBottom: '60px', maxWidth: '1400px', margin: '0 auto', padding: '120px 20px 60px' }}>
-        <h1 style={{ marginBottom: '20px', color: '#1e293b' }}>💰 Gestión de Pagos</h1>
+        <h1 style={{ marginBottom: '20px', color: '#1e293b' }}>💰 Gestión de Ingresos</h1>
 
-      {/* Tarjetas de resumen */}
+      {/* Tarjeta de resumen */}
       <div style={{ 
-        display: 'grid', 
-        gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-        gap: '20px',
+        display: 'flex',
+        justifyContent: 'center',
         marginBottom: '30px'
       }}>
-        <div style={{
-          background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-          padding: '20px',
-          borderRadius: '12px',
-          color: 'white',
-          boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
-        }}>
-          <div style={{ fontSize: '14px', opacity: 0.9 }}>💵 Total Pagado</div>
-          <div style={{ fontSize: '32px', fontWeight: 'bold', marginTop: '10px' }}>
-            ${totales.pagados.toFixed(2)}
-          </div>
-          <div style={{ fontSize: '12px', opacity: 0.8, marginTop: '5px' }}>
-            {pagos.filter(p => p.estadoNombre === 'Pagado').length} pagos confirmados
-          </div>
-        </div>
-
-        <div style={{
-          background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-          padding: '20px',
-          borderRadius: '12px',
-          color: 'white',
-          boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
-        }}>
-          <div style={{ fontSize: '14px', opacity: 0.9 }}>⏳ Pendiente de Pago</div>
-          <div style={{ fontSize: '32px', fontWeight: 'bold', marginTop: '10px' }}>
-            ${totales.pendientes.toFixed(2)}
-          </div>
-          <div style={{ fontSize: '12px', opacity: 0.8, marginTop: '5px' }}>
-            {pagosPendientes.length} reservas sin pagar
-          </div>
-        </div>
-
         <div style={{
           background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
           padding: '20px',
           borderRadius: '12px',
           color: 'white',
-          boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+          boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+          minWidth: '300px'
         }}>
-          <div style={{ fontSize: '14px', opacity: 0.9 }}>📊 Total General</div>
+          <div style={{ fontSize: '14px', opacity: 0.9 }}>💰 Total de Ingresos</div>
           <div style={{ fontSize: '32px', fontWeight: 'bold', marginTop: '10px' }}>
             ${totales.total.toFixed(2)}
           </div>

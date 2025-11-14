@@ -21,6 +21,7 @@ export default function Empleados(){
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [deletingEmpleado, setDeletingEmpleado] = useState(null)
   const [deleteSubmitting, setDeleteSubmitting] = useState(false)
+  const [searchTerm, setSearchTerm] = useState('')
 
   useEffect(()=>{
     // Check permissions: only permisos === 3 (admin)
@@ -248,13 +249,25 @@ export default function Empleados(){
     }
   }
 
+  const filteredEmpleados = empleados.filter(emp => {
+    if (!searchTerm) return true
+    const search = searchTerm.toLowerCase()
+    return (
+      (emp.nombre && emp.nombre.toLowerCase().includes(search)) ||
+      (emp.apellido && emp.apellido.toLowerCase().includes(search))
+    )
+  })
+
   if (loading) return (<div style={{padding:40,textAlign:'center'}}>Cargando...</div>)
 
   return (
     <div style={{minHeight:'100vh', background:'var(--gris)'}}>
       <header className="site-header">
         <div className="container header-inner">
-          <img src="/assets/logo.png" alt="logo" className="logo" />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <img src="/assets/logo.png" alt="logo" className="logo" />
+            <span style={{ fontSize: '24px', fontWeight: '700', color: 'var(--verde-oscuro)' }}>GoField</span>
+          </div>
           <nav className="nav">
             <div className="header-actions">
               <Link to="/proximas-reservas" className="nav-link btn-calendar">Próximas Reservas</Link>
@@ -262,7 +275,7 @@ export default function Empleados(){
               <Link to="/empleados" className="nav-link btn-perfil">Empleados y Usuarios</Link>
               <Link to="/clientes-admin" className="nav-link btn-perfil">Clientes</Link>
               <Link to="/torneos-admin" className="nav-link btn-perfil">Torneos</Link>
-              <Link to="/pagos" className="nav-link btn-perfil">Pagos</Link>
+              <Link to="/pagos" className="nav-link btn-perfil">Ingresos</Link>
               <Link to="/reportes" className="nav-link btn-perfil">Reportes</Link>
               <Link to="/perfil" className="nav-link btn-perfil">Mi Perfil</Link>
               <button onClick={handleLogout} className="btn btn-logout">Cerrar Sesión</button>
@@ -285,6 +298,24 @@ export default function Empleados(){
           </button>
         </div>
         
+        <div style={{marginBottom:20}}>
+          <input
+            type="text"
+            placeholder="Buscar por nombre o apellido..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            style={{
+              width: '100%',
+              maxWidth: '400px',
+              padding: '10px 16px',
+              fontSize: '16px',
+              border: '1px solid #ddd',
+              borderRadius: '6px',
+              outline: 'none'
+            }}
+          />
+        </div>
+        
         <div style={{background:'#fff', borderRadius:8, overflow:'hidden', boxShadow:'0 2px 8px rgba(0,0,0,0.1)'}}>
           <table style={{width:'100%', borderCollapse:'collapse'}}>
             <thead>
@@ -299,14 +330,14 @@ export default function Empleados(){
               </tr>
             </thead>
             <tbody>
-              {empleados.length === 0 && (
+              {filteredEmpleados.length === 0 && (
                 <tr>
                   <td colSpan="7" style={{padding:40, textAlign:'center', color:'#999'}}>
-                    No hay empleados registrados
+                    {searchTerm ? 'No se encontraron empleados' : 'No hay empleados registrados'}
                   </td>
                 </tr>
               )}
-              {empleados.map((emp) => (
+              {filteredEmpleados.map((emp) => (
                 <tr key={emp.idEmpleado} style={{borderBottom:'1px solid #eee'}}>
                   <td style={{padding:12}}>{emp.nombre}</td>
                   <td style={{padding:12}}>{emp.apellido}</td>

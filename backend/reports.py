@@ -159,7 +159,9 @@ def reporte_reservas_cancha():
         # Obtener nombre del deporte de la cancha
         deporte_nombre = 'N/A'
         if cancha and cancha.get('deporte'):
-            deporte_nombre = deporte_map.get(cancha.get('deporte'), 'N/A')
+            # Convertir a int en caso de que venga como string
+            deporte_id = int(cancha.get('deporte'))
+            deporte_nombre = deporte_map.get(deporte_id, 'N/A')
         
         # Enriquecer cada reserva con información del cliente
         for reserva in reservas:
@@ -239,10 +241,14 @@ def reporte_canchas_mas_usadas():
                 
                 count = q.distinct().count()
                 
+                # Convertir deporte a int para buscar en el mapa
+                deporte_id = int(cancha['deporte']) if cancha.get('deporte') else None
+                deporte_nombre = deporte_map.get(deporte_id) if deporte_id else 'N/A'
+                
                 resultado.append({
                     'idCancha': cancha['idCancha'],
                     'nombre': cancha['nombre'],
-                    'deporte': deporte_map.get(cancha['deporte']),
+                    'deporte': deporte_nombre,
                     'conteo_reservas': count,
                     'precioHora': cancha.get('precioHora', 0)
                 })
