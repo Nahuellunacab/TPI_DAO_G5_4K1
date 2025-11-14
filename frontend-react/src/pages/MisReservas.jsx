@@ -260,12 +260,12 @@ export default function MisReservas(){
                         </div>
                         <div style={{display:'flex', justifyContent:'flex-end', gap:8, marginTop:12}}>
                           <button className="btn btn-outline" onClick={async ()=>{
-                            // Open edit modal for this reserva (edit fechaReservada)
-                            setEditingReserva(r)
-                            // normalize date to yyyy-mm-dd for input[type=date]
-                            try{ const d = parseLocalDate(r.fechaReservada); if (!isNaN(d)) setEditFecha(toYMD(d)); else setEditFecha(r.fechaReservada) }catch(e){ setEditFecha(r.fechaReservada) }
-                            setModalError(null)
-                            setShowEditModal(true)
+                            // Navigate to reservas page with cancha and reserva id to highlight current slots
+                            const dets = Array.isArray(r.detalles) ? r.detalles : []
+                            const canchaId = dets.length > 0 ? dets[0].idCancha : null
+                            if (canchaId){
+                              navigate(`/reservas?cancha=${canchaId}&editReserva=${r.idReserva}`)
+                            }
                           }}>Editar</button>
                           <button className="btn btn-danger" onClick={async ()=>{
                             // open custom delete confirmation modal

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import Notify from './Notify';
+import { validarPrecio, validarSeleccion } from '../utils/validations';
 import '../styles.css';
 
 /**
@@ -10,6 +11,7 @@ export default function PagoModal({ isOpen, onClose, reserva, onPagoCreado }) {
   const [metodosPago, setMetodosPago] = useState([]);
   const [loading, setLoading] = useState(false);
   const [notify, setNotify] = useState({ open: false, type: 'success', title: '', message: '' });
+  const [errores, setErrores] = useState({});
   const [formData, setFormData] = useState({
     idMetodoPago: '',
     monto: reserva?.monto || 0,
@@ -40,14 +42,31 @@ export default function PagoModal({ isOpen, onClose, reserva, onPagoCreado }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setErrores({});
     
-    if (!formData.idMetodoPago) {
+    // Validar método de pago
+    const validacionMetodo = validarSeleccion(formData.idMetodoPago, 'un método de pago');
+    if (!validacionMetodo.valido) {
       setNotify({
         open: true,
         type: 'error',
         title: 'ERROR',
-        message: 'Debe seleccionar un método de pago'
+        message: validacionMetodo.mensaje
       });
+      setErrores({ idMetodoPago: validacionMetodo.mensaje });
+      return;
+    }
+    
+    // Validar monto
+    const validacionMonto = validarPrecio(formData.monto, 0.01);
+    if (!validacionMonto.valido) {
+      setNotify({
+        open: true,
+        type: 'error',
+        title: 'ERROR',
+        message: validacionMonto.mensaje
+      });
+      setErrores({ monto: validacionMonto.mensaje });
       return;
     }
 
@@ -186,7 +205,7 @@ export default function PagoModal({ isOpen, onClose, reserva, onPagoCreado }) {
                   width: '100%',
                   padding: '8px 12px',
                   borderRadius: '6px',
-                  border: '1px solid rgba(255,255,255,0.2)',
+                  border: errores.idMetodoPago ? '2px solid #f87171' : '1px solid rgba(255,255,255,0.2)',
                   fontSize: '14px',
                   background: 'rgba(0,0,0,0.3)',
                   color: 'rgba(255,255,255,0.95)',
@@ -200,6 +219,9 @@ export default function PagoModal({ isOpen, onClose, reserva, onPagoCreado }) {
                   </option>
                 ))}
               </select>
+              {errores.idMetodoPago && (
+                <small style={{color:'#f87171', fontSize:12, marginTop:4, display:'block'}}>{errores.idMetodoPago}</small>
+              )}
             </div>
 
             <div style={{ marginBottom: '12px' }}>
@@ -225,13 +247,16 @@ export default function PagoModal({ isOpen, onClose, reserva, onPagoCreado }) {
                   width: '100%',
                   padding: '8px 12px',
                   borderRadius: '6px',
-                  border: '1px solid rgba(255,255,255,0.2)',
+                  border: errores.monto ? '2px solid #f87171' : '1px solid rgba(255,255,255,0.2)',
                   fontSize: '14px',
                   background: 'rgba(0,0,0,0.3)',
                   color: 'rgba(255,255,255,0.95)',
                   outline: 'none'
                 }}
               />
+              {errores.monto && (
+                <small style={{color:'#f87171', fontSize:12, marginTop:4, display:'block'}}>{errores.monto}</small>
+              )}
             </div>
 
             <div style={{ marginBottom: '16px' }}>

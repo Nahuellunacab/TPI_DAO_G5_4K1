@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import Notify from './Notify'
 import ConfirmModal from './ConfirmModal'
+import { validarTexto, validarPrecio, validarSeleccion } from '../utils/validations'
 
 export default function NewCanchaModalNice({ open, onClose, onCreated, editMode = false, initialCancha = null, onUpdated }) {
   const [nombre, setNombre] = useState('')
@@ -18,6 +19,7 @@ export default function NewCanchaModalNice({ open, onClose, onCreated, editMode 
   const [loading, setLoading] = useState(false)
   const [notify, setNotify] = useState({ open:false, type:'success', title:'', message:'' })
   const [confirmedModalOpen, setConfirmedModalOpen] = useState(false)
+  const [errores, setErrores] = useState({})
 
   useEffect(() => {
     const list = [
@@ -119,6 +121,49 @@ export default function NewCanchaModalNice({ open, onClose, onCreated, editMode 
 
   async function submit(e) {
     e.preventDefault()
+    setErrores({})
+    
+    // Validar nombre
+    const validacionNombre = validarTexto(nombre, 'Nombre', 2, 100)
+    if (!validacionNombre.valido) {
+      setErrores({ nombre: validacionNombre.mensaje })
+      setNotify({ open: true, type: 'error', title: 'Error de validación', message: validacionNombre.mensaje })
+      return
+    }
+    
+    // Validar deporte
+    const validacionDeporte = validarSeleccion(deporte, 'un deporte')
+    if (!validacionDeporte.valido) {
+      setErrores({ deporte: validacionDeporte.mensaje })
+      setNotify({ open: true, type: 'error', title: 'Error de validación', message: validacionDeporte.mensaje })
+      return
+    }
+    
+    // Validar precio
+    const validacionPrecio = validarPrecio(precio, 0)
+    if (!validacionPrecio.valido) {
+      setErrores({ precio: validacionPrecio.mensaje })
+      setNotify({ open: true, type: 'error', title: 'Error de validación', message: validacionPrecio.mensaje })
+      return
+    }
+    
+    // Validar precios de servicios seleccionados
+    const serviciosConErrores = []
+    Object.keys(serviciosSeleccionados).forEach(idServicio => {
+      const servicio = serviciosSeleccionados[idServicio]
+      if (servicio.selected && servicio.precio) {
+        const validacion = validarPrecio(servicio.precio, 0, false)
+        if (!validacion.valido) {
+          serviciosConErrores.push(`Servicio ${idServicio}: ${validacion.mensaje}`)
+        }
+      }
+    })
+    
+    if (serviciosConErrores.length > 0) {
+      setNotify({ open: true, type: 'error', title: 'Error en servicios', message: serviciosConErrores.join(', ') })
+      return
+    }
+    
     setLoading(true)
     try {
       let created
@@ -250,8 +295,13 @@ export default function NewCanchaModalNice({ open, onClose, onCreated, editMode 
 
           <form className="register-form" onSubmit={submit}>
             <div className="row">
-              <label>Nombre</label>
-              <input value={nombre} onChange={e => setNombre(e.target.value)} required />
+              <label>Nombre *</label>
+              <input 
+                value={nombre} 
+                onChange={e => { setNombre(e.target.value); setErrores(prev => ({...prev, nombre: null})) }} 
+                className={errores.nombre ? 'input-error' : ''}
+              />
+              {errores.nombre && <span className="error-message">{errores.nombre}</span>}
             </div>
 
             <div className="row">
@@ -263,23 +313,31 @@ export default function NewCanchaModalNice({ open, onClose, onCreated, editMode 
             </div>
 
             <div className="row">
-              <label>Deporte</label>
-              <select value={deporte} onChange={e => setDeporte(e.target.value)} required>
+              <label>Deporte *</label>
+              <select 
+                value={deporte} 
+                onChange={e => { setDeporte(e.target.value); setErrores(prev => ({...prev, deporte: null})) }}
+                className={errores.deporte ? 'input-error' : ''}
+              >
                 {deportes.map(d => (
                   <option key={d.idDeporte} value={d.idDeporte}>{d.nombre}</option>
                 ))}
               </select>
+              {errores.deporte && <span className="error-message">{errores.deporte}</span>}
             </div>
 
             <div className="row">
-              <label>Precio por hora</label>
+              <label>Precio por hora *</label>
               <input
                 value={precio}
-                onChange={e => setPrecio(e.target.value)}
+                onChange={e => { setPrecio(e.target.value); setErrores(prev => ({...prev, precio: null})) }}
                 placeholder="0"
                 type="number"
                 min="0"
+                step="0.01"
+                className={errores.precio ? 'input-error' : ''}
               />
+              {errores.precio && <span className="error-message">{errores.precio}</span>}
             </div>
 
             <div className="row">

@@ -292,8 +292,27 @@ body{margin:0;font-family:Inter, system-ui, -apple-system, 'Segoe UI', Roboto, '
 .res-slot.available { background: #ffffff; border: 1px solid rgba(0,0,0,0.06); }
 .res-slot.available:hover { background: #9fe07a; /* brighter green for hover */ transform: translateY(-2px); }
 .res-slot.occupied { background: #2f8cc9; color: white; }
-.res-slot.unavailable { display:none; }
+.res-slot.unavailable { 
+  background: #e0e0e0; 
+  border: 1px solid #bdbdbd; 
+  color: #9e9e9e; 
+  cursor: not-allowed;
+  opacity: 0.6;
+}
 .res-slot.past { background:#f4f4f4; border:1px solid #ddd; color:#9a9a9a; cursor:not-allowed; }
+
+/* Editing slot styling - for current reservation being edited */
+.res-slot.editing { 
+  background: linear-gradient(180deg, #ff9800, #f57c00); 
+  border: 2px solid #e65100; 
+  color: #fff; 
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(255, 152, 0, 0.4);
+}
+.res-slot.editing:hover { 
+  background: linear-gradient(180deg, #fb8c00, #ef6c00); 
+  transform: translateY(-2px);
+}
 
 /* Suggested block highlight (for multi-turn suggestions) */
 .res-slot.suggested { background: #9fe07a; border: 1px solid #6fbf52; }
@@ -358,4 +377,30 @@ body{margin:0;font-family:Inter, system-ui, -apple-system, 'Segoe UI', Roboto, '
 .btn{ padding:8px 12px; border-radius:6px; border:none }
 .btn-outline{ background:#fff; border:1px solid #ccc }
 .btn-primary{ background:var(--verde-oscuro); color:#fff }
+
+/* Validation error styles */
+.input-error {
+  border: 2px solid #ef4444 !important;
+  background-color: #fef2f2 !important;
+}
+
+.input-error:focus {
+  outline: 2px solid #ef4444 !important;
+  outline-offset: 2px;
+}
+
+.error-message {
+  color: #ef4444;
+  font-size: 12px;
+  margin-top: 4px;
+  display: block;
+  font-weight: 500;
+}
+
+.helper-text {
+  color: #6b7280;
+  font-size: 12px;
+  margin-top: 4px;
+  display: block;
+}
 

@@ -1,20 +1,35 @@
 import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import RegisterModal from '../components/RegisterModal'
+import { validarUsuario, validarContrasena } from '../utils/validations'
 
 export default function Login(){
   const [showModal, setShowModal] = useState(false)
   const [notify, setNotify] = useState({show:false, title:'', message:'', variant:'info'})
+  const [errores, setErrores] = useState({})
 
   function handleSubmit(e){
     e.preventDefault()
+    setErrores({})
+    
     const fd = new FormData(e.target)
-    const usuario = fd.get('usuario')
-    const contrasena = fd.get('contrasena')
-    if(!usuario || !contrasena){
-      alert('Ingrese usuario y contraseña')
+    const usuario = (fd.get('usuario') || '').trim()
+    const contrasena = fd.get('contrasena') || ''
+    
+    // Validar usuario
+    const validacionUsuario = validarUsuario(usuario)
+    if (!validacionUsuario.valido) {
+      setErrores({ usuario: validacionUsuario.mensaje })
       return
     }
+    
+    // Validar contraseña
+    const validacionContrasena = validarContrasena(contrasena)
+    if (!validacionContrasena.valido) {
+      setErrores({ contrasena: validacionContrasena.mensaje })
+      return
+    }
+    
     // Try a simple auth flow against backend users list (development only).
     // We fetch /api/usuarios, match usuario+contrasena (plain text) and then
     // try to find a Cliente linked to that usuario (idUsuario).
@@ -84,8 +99,33 @@ export default function Login(){
           <div className="login-hero-content container">
             <h1 className="login-title">BIENVENIDO!</h1>
             <form className="login-form" onSubmit={handleSubmit}>
-              <input name="usuario" className="login-input" placeholder="USUARIO" />
-              <input name="contrasena" type="password" className="login-input" placeholder="CONTRASEÑA" />
+              <div style={{position:'relative', width:'100%'}}>
+                <input 
+                  name="usuario" 
+                  className={`login-input ${errores.usuario ? 'input-error' : ''}`}
+                  placeholder="USUARIO" 
+                  style={{borderColor: errores.usuario ? '#ef4444' : undefined}}
+                />
+                {errores.usuario && (
+                  <div style={{color:'#ef4444', fontSize:13, marginTop:4, textAlign:'left'}}>
+                    {errores.usuario}
+                  </div>
+                )}
+              </div>
+              <div style={{position:'relative', width:'100%'}}>
+                <input 
+                  name="contrasena" 
+                  type="password" 
+                  className={`login-input ${errores.contrasena ? 'input-error' : ''}`}
+                  placeholder="CONTRASEÑA" 
+                  style={{borderColor: errores.contrasena ? '#ef4444' : undefined}}
+                />
+                {errores.contrasena && (
+                  <div style={{color:'#ef4444', fontSize:13, marginTop:4, textAlign:'left'}}>
+                    {errores.contrasena}
+                  </div>
+                )}
+              </div>
               <div className="login-actions">
                 <button className="btn btn-outline" type="submit">INICIAR SESIÓN</button>
                 <button className="btn btn-primary" type="button" onClick={()=>setShowModal(true)}>REGISTRARME</button>

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { validarFormulario, mostrarErrores } from '../utils/validations'
 
 // Props:
 // - show: boolean
@@ -11,6 +12,7 @@ export default function RegisterModal({ show, onClose, createUser = true, onSucc
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [submitting, setSubmitting] = useState(false)
+  const [errores, setErrores] = useState({})
   const navigate = useNavigate()
 
   useEffect(()=>{
@@ -33,23 +35,58 @@ export default function RegisterModal({ show, onClose, createUser = true, onSucc
 
   async function handleSubmit(e){
     e.preventDefault()
-    setSubmitting(true)
+    setErrores({})
+    
     const fd = new FormData(e.target)
-    const payloadCliente = {
-      idTipoDoc: fd.get('idTipoDoc') ? Number(fd.get('idTipoDoc')) : null,
-      numeroDoc: fd.get('numeroDoc') ? Number(fd.get('numeroDoc')) : null,
+    const datos = {
+      usuario: fd.get('usuario') || '',
+      contrasena: fd.get('contrasena') || '',
+      idTipoDoc: fd.get('idTipoDoc') || '',
+      numeroDoc: fd.get('numeroDoc') || '',
       nombre: fd.get('nombre') || '',
       apellido: fd.get('apellido') || '',
       telefono: fd.get('telefono') || '',
       mail: fd.get('mail') || ''
     }
 
+    // Definir reglas de validación
+    const reglas = {
+      mail: { tipo: 'email', requerido: true },
+      telefono: { tipo: 'telefono', requerido: false },
+      nombre: { tipo: 'nombre', campo: 'Nombre', requerido: true },
+      apellido: { tipo: 'nombre', campo: 'Apellido', requerido: true },
+      idTipoDoc: { tipo: 'seleccion', campo: 'tipo de documento', requerido: true },
+      numeroDoc: { tipo: 'documento', requerido: true }
+    }
+
+    if (createUser) {
+      reglas.usuario = { tipo: 'usuario', requerido: true }
+      reglas.contrasena = { tipo: 'contrasena', requerido: true }
+    }
+
+    // Validar formulario
+    const { esValido, errores: erroresValidacion } = validarFormulario(datos, reglas)
+    
+    if (!esValido) {
+      mostrarErrores(erroresValidacion, setErrores)
+      return
+    }
+
+    setSubmitting(true)
+    const payloadCliente = {
+      idTipoDoc: Number(datos.idTipoDoc),
+      numeroDoc: Number(datos.numeroDoc),
+      nombre: datos.nombre.trim(),
+      apellido: datos.apellido.trim(),
+      telefono: datos.telefono.trim(),
+      mail: datos.mail.trim()
+    }
+
     try{
       let idUsuario = null
       if(createUser){
-        const usuario = fd.get('usuario')
-        const contrasena = fd.get('contrasena')
-        if(!usuario || !contrasena) throw new Error('Usuario y contraseña requeridos')
+        const usuario = datos.usuario.trim()
+        const contrasena = datos.contrasena
         const uResp = await fetch('/api/usuarios', {
           method: 'POST', headers: {'Content-Type':'application/json'},
           body: JSON.stringify({ usuario, contrasena, permiso: 2 })
@@ -103,18 +140,22 @@ export default function RegisterModal({ show, onClose, createUser = true, onSucc
             {createUser && (
               <>
                 <div className="row">
-                  <label>Usuario</label>
-                  <input name="usuario" required />
+                  <label>Usuario *</label>
+                  <input name="usuario" className={errores.usuario ? 'input-error' : ''} />
+                  {errores.usuario && <span className="error-message">{errores.usuario}</span>}
+                  <small style={{color:'#666',fontSize:12}}>3-20 caracteres, solo letras, números, - y _</small>
                 </div>
                 <div className="row">
-                  <label>Contraseña</label>
-                  <input name="contrasena" type="password" required />
+                  <label>Contraseña *</label>
+                  <input name="contrasena" type="password" className={errores.contrasena ? 'input-error' : ''} />
+                  {errores.contrasena && <span className="error-message">{errores.contrasena}</span>}
+                  <small style={{color:'#666',fontSize:12}}>Mínimo 6 caracteres</small>
                 </div>
               </>
             )}
 
             <div className="row">
-              <label>Tipo Documento</label>
+              <label>Tipo Documento *</label>
               {loading ? (
                 <div>Cargando...</div>
               ) : error ? (
@@ -122,32 +163,41 @@ export default function RegisterModal({ show, onClose, createUser = true, onSucc
               ) : tipos.length === 0 ? (
                 <div>No hay tipos disponibles</div>
               ) : (
-                <select name="idTipoDoc" defaultValue={tipos[0]?.idTipoDoc || ''} required>
-                  <option value="">Seleccione...</option>
-                  {tipos.map(t => (<option key={t.idTipoDoc} value={t.idTipoDoc}>{t.nombre}</option>))}
-                </select>
+                <>
+                  <select name="idTipoDoc" defaultValue={tipos[0]?.idTipoDoc || ''} className={errores.idTipoDoc ? 'input-error' : ''}>
+                    <option value="">Seleccione...</option>
+                    {tipos.map(t => (<option key={t.idTipoDoc} value={t.idTipoDoc}>{t.nombre}</option>))}
+                  </select>
+                  {errores.idTipoDoc && <span className="error-message">{errores.idTipoDoc}</span>}
+                </>
               )}
             </div>
 
             <div className="row">
-              <label>Número Documento</label>
-              <input name="numeroDoc" type="number" />
+              <label>Número Documento *</label>
+              <input name="numeroDoc" type="number" className={errores.numeroDoc ? 'input-error' : ''} />
+              {errores.numeroDoc && <span className="error-message">{errores.numeroDoc}</span>}
+              <small style={{color:'#666',fontSize:12}}>7-9 dígitos</small>
             </div>
             <div className="row">
-              <label>Nombre</label>
-              <input name="nombre" />
+              <label>Nombre *</label>
+              <input name="nombre" className={errores.nombre ? 'input-error' : ''} />
+              {errores.nombre && <span className="error-message">{errores.nombre}</span>}
             </div>
             <div className="row">
-              <label>Apellido</label>
-              <input name="apellido" />
+              <label>Apellido *</label>
+              <input name="apellido" className={errores.apellido ? 'input-error' : ''} />
+              {errores.apellido && <span className="error-message">{errores.apellido}</span>}
             </div>
             <div className="row">
               <label>Teléfono</label>
-              <input name="telefono" />
+              <input name="telefono" className={errores.telefono ? 'input-error' : ''} />
+              {errores.telefono && <span className="error-message">{errores.telefono}</span>}
             </div>
             <div className="row">
-              <label>Email</label>
-              <input name="mail" type="email" />
+              <label>Email *</label>
+              <input name="mail" type="email" className={errores.mail ? 'input-error' : ''} />
+              {errores.mail && <span className="error-message">{errores.mail}</span>}
             </div>
 
             <div className="actions">

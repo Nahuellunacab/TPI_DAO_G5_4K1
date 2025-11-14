@@ -128,7 +128,10 @@ function resolveDeporteNameFromCancha(cancha, deportesMap){
 export default function Reservas(){
   const query = useQuery()
   const idCanchaParam = query.get('idCancha')
+  const editReservaParam = query.get('editReserva')
   const [idCancha, setIdCancha] = useState(idCanchaParam ? Number(idCanchaParam) : null)
+  const [editingReservaId, setEditingReservaId] = useState(editReservaParam ? Number(editReservaParam) : null)
+  const [editingReservaSlots, setEditingReservaSlots] = useState([])
   const [horarios, setHorarios] = useState([])
   const [events, setEvents] = useState([])
   const [estadosMap, setEstadosMap] = useState({})
@@ -187,11 +190,27 @@ export default function Reservas(){
           setDeportesMap(dm)
         }
       }catch(e){ /* ignore */ }
+      // If editing a reservation, load its details to highlight current slots
+      if (editingReservaId){
+        try{
+          const rRes = await fetch(`/api/reserva/${editingReservaId}`)
+          if (rRes.ok){
+            const reservaData = await rRes.json()
+            const detalles = Array.isArray(reservaData.detalles) ? reservaData.detalles : []
+            // Extract slots: {idHorario, fechaReservada}
+            const slots = detalles.map(d => ({
+              idHorario: d.idHorario,
+              fechaReservada: reservaData.fechaReservada
+            }))
+            setEditingReservaSlots(slots)
+          }
+        }catch(e){ console.error('Error cargando reserva para edición', e) }
+      }
       setLoading(false)
     }
     load()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [idCancha])
+  }, [idCancha, editingReservaId])
 
   // When entering the page with an idCancha we no longer show a modal;
   // instead suggestions are computed and highlighted in the calendar.
@@ -286,6 +305,15 @@ export default function Reservas(){
   const sDate = toYMD(parseLocalDate(selectedBlock.startDate))
     if (sDate !== dateStr) return false
     return selectedBlock.horarios.some(h => Number(h.idHorario) === Number(horario.idHorario))
+  }
+
+  function isEditingSlot(date, horario){
+    if (!editingReservaSlots || editingReservaSlots.length === 0) return false
+    const dateStr = toYMD(date)
+    return editingReservaSlots.some(slot => {
+      const slotDate = slot.fechaReservada ? String(slot.fechaReservada).split('T')[0] : ''
+      return slotDate === dateStr && Number(slot.idHorario) === Number(horario.idHorario)
+    })
   }
 
   async function handleSuggestedClick(date, horario){
@@ -797,14 +825,18 @@ export default function Reservas(){
                       const isSelectedSlot = isSelected(d,h)
                       let slotClass = ''
                       if (isMidnightSlot){
+                        const isEditSlot = isEditingSlot(d, h)
                         if (!allowedMidnight) slotClass = 'res-slot unavailable'
+                        else if (isEditSlot) slotClass = 'res-slot editing'
                         else if (occupied) slotClass = 'res-slot occupied'
                         else if (pastSlot) slotClass = 'res-slot past'
                         else if (isSelectedSlot) slotClass = 'res-slot selected'
                         else if (isSuggestedSlot) slotClass = 'res-slot available suggested'
                         else slotClass = 'res-slot available'
                       }else{
+                        const isEditSlot = isEditingSlot(d, h)
                         if (dayIndex === 0) slotClass = 'res-slot unavailable'
+                        else if (isEditSlot) slotClass = 'res-slot editing'
                         else if (occupied) slotClass = 'res-slot occupied'
                         else if (pastSlot) slotClass = 'res-slot past'
                         else if (isSelectedSlot) slotClass = 'res-slot selected'

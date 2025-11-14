@@ -186,7 +186,8 @@ def obtener_pago_reserva(idReserva):
     try:
         pago = obtener_pago_por_reserva(idReserva)
         if not pago:
-            return json_error('No se encontró pago para esta reserva', 404)
+            # En lugar de devolver 404, devolvemos null para indicar que no hay pago
+            return jsonify(None), 200
         return jsonify(pago)
     except Exception as e:
         traceback.print_exc()

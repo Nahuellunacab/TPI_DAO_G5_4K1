@@ -444,14 +444,12 @@ export default function ProximasReservas(){
                         fontWeight:600
                       }}
                       onClick={()=>{
-                        setEditingReserva(r)
-                        try{ 
-                          const d = parseLocalDate(r.fechaReservada)
-                          if (!isNaN(d)) setEditFecha(toYMD(d))
-                          else setEditFecha(r.fechaReservada)
-                        }catch(e){ setEditFecha(r.fechaReservada) }
-                        setModalError(null)
-                        setShowEditModal(true)
+                        // Navigate to reservas page with cancha and reserva id to highlight current slots
+                        const dets = Array.isArray(r.detalles) ? r.detalles : []
+                        const canchaId = dets.length > 0 ? dets[0].idCancha : null
+                        if (canchaId){
+                          navigate(`/reservas?cancha=${canchaId}&editReserva=${r.idReserva}`)
+                        }
                       }}
                     >
                       Editar
