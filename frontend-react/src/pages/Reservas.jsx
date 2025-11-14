@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useMemo } from 'react'
 import { parseLocalDate, toYMD } from '../utils/dateUtils'
 import { useLocation, Link, useNavigate } from 'react-router-dom'
 
@@ -64,6 +64,42 @@ function formatTimeRange(h){
     return `${hi.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})} - ${hf.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}`
   }catch(e){
     return `${String(hiRaw)} - ${String(hfRaw)}`
+  }
+}
+
+function slotStartDate(date, horario){
+  try{
+    const d = new Date(date)
+    if (!horario) return null
+    if (typeof horario.horaInicio === 'string'){
+      const parts = horario.horaInicio.split(':')
+      const hours = Number(parts[0]) || 0
+      const minutes = Number(parts[1]) || 0
+      d.setHours(hours, minutes, 0, 0)
+      return d
+    }
+    if (horario.horaInicio instanceof Date){
+      d.setHours(horario.horaInicio.getHours(), horario.horaInicio.getMinutes(), 0, 0)
+      return d
+    }
+    const parsed = new Date(horario.horaInicio)
+    if (!isNaN(parsed)){
+      d.setHours(parsed.getHours(), parsed.getMinutes(), 0, 0)
+      return d
+    }
+  }catch(e){
+    return null
+  }
+  return null
+}
+
+function isSlotInPast(date, horario){
+  try{
+    const slotDate = slotStartDate(date, horario)
+    if (!slotDate) return false
+    return slotDate.getTime() < Date.now()
+  }catch(e){
+    return false
   }
 }
 
@@ -197,6 +233,7 @@ export default function Reservas(){
     const hf = String(horario.horaFin || '').trim()
     const isMidnightSlot = (hi === '00:00' && hf === '01:30')
     const allowedMidnight = isMidnightSlot && (dayIndex === 6 || dayIndex === 0)
+    if (isSlotInPast(date, horario)) return false
     if (isMidnightSlot) return allowedMidnight
     if (dayIndex === 0) return false
     return true
@@ -205,16 +242,16 @@ export default function Reservas(){
   // Compute suggestions of consecutive available horarios for the week
   function computeSuggestions(n){
     const out = []
-    if (!horarios || horarios.length === 0) return out
+    if (!displayHorarios || displayHorarios.length === 0) return out
     // iterate each day
     for(const d of weekDates){
-      for(let i=0;i<horarios.length;i++){
+      for(let i=0;i<displayHorarios.length;i++){
         // need n consecutive horarios starting at i
-        if (i + n - 1 >= horarios.length) break
+        if (i + n - 1 >= displayHorarios.length) break
         let ok = true
         const block = []
         for(let k=0;k<n;k++){
-          const h = horarios[i+k]
+          const h = displayHorarios[i+k]
           if (!isSlotAllowed(d,h) || isOccupied(d,h)) { ok = false; break }
           block.push(h)
         }
@@ -264,12 +301,12 @@ export default function Reservas(){
     if (!horarios || horarios.length === 0) return null
   const dateStr = toYMD(date)
     // find index of horario in horarios array
-    const idx = horarios.findIndex(h => Number(h.idHorario) === Number(horario.idHorario))
+    const idx = displayHorarios.findIndex(h => Number(h.idHorario) === Number(horario.idHorario))
     if (idx === -1) return null
-    if (idx + n - 1 >= horarios.length) return null
+    if (idx + n - 1 >= displayHorarios.length) return null
     const blockH = []
     for(let k=0;k<n;k++){
-      const h = horarios[idx + k]
+      const h = displayHorarios[idx + k]
       // ensure allowed and not occupied for the target date
       if (!isSlotAllowed(date, h) || isOccupied(date, h)) return null
       blockH.push(h)
@@ -601,6 +638,24 @@ export default function Reservas(){
   const weekDates = []
   for(let i=0;i<7;i++){ const d = new Date(weekStart); d.setDate(weekStart.getDate()+i); weekDates.push(d) }
 
+  // For display purposes we want horarios that start at midnight (00:00)
+  // to appear at the bottom of the table so they visually belong to
+  // the day column they are reserved on (i.e. a Saturday 00:00-01:30
+  // should be shown under Saturday rather than at the very top). We
+  // create a derived ordering that moves midnight-start horarios to
+  // the end while preserving relative order.
+  const displayHorarios = useMemo(()=>{
+    if (!Array.isArray(horarios) || horarios.length === 0) return horarios
+    const normal = []
+    const midnight = []
+    for(const h of horarios){
+      const hi = String(h.horaInicio || '').trim()
+      if (hi.startsWith('00:')) midnight.push(h)
+      else normal.push(h)
+    }
+    return [...normal, ...midnight]
+  }, [horarios])
+
   return (
     <div className="reservas-root">
       <header className="site-header">
@@ -651,7 +706,7 @@ export default function Reservas(){
                   <td colSpan={8} style={{padding:20, textAlign:'center'}}>No hay horarios definidos en el sistema.</td>
                 </tr>
               ) : (
-                horarios.map(h => (
+                displayHorarios.map(h => (
                   <tr key={h.idHorario}>
                     <td style={{border:'1px solid #eee', padding:8}}>{formatTimeRange(h)}</td>
                     {weekDates.map((d,idx)=>{
@@ -664,6 +719,7 @@ export default function Reservas(){
                       const hf = String(h.horaFin || '').trim()
                       const isMidnightSlot = (hi === '00:00' && hf === '01:30')
                       const allowedMidnight = isMidnightSlot && (dayIndex === 6 || dayIndex === 0)
+                      const pastSlot = isSlotInPast(d, h)
 
                       let cellContent = null
                       // Render as calendar-style slot blocks. We use CSS classes to
@@ -674,11 +730,31 @@ export default function Reservas(){
                       const suggestedIndex = isSuggested(d,h)
                       const isSuggestedSlot = suggestedIndex >= 0
                       const isSelectedSlot = isSelected(d,h)
-                      const slotClass = isMidnightSlot ?
-                        (allowedMidnight ? (occupied ? 'res-slot occupied' : (isSelectedSlot ? 'res-slot selected' : (isSuggestedSlot ? 'res-slot available suggested' : 'res-slot available'))) : 'res-slot unavailable') :
-                        (dayIndex === 0 ? 'res-slot unavailable' : (occupied ? 'res-slot occupied' : (isSelectedSlot ? 'res-slot selected' : (isSuggestedSlot ? 'res-slot available suggested' : 'res-slot available'))))
+                      let slotClass = ''
+                      if (isMidnightSlot){
+                        if (!allowedMidnight) slotClass = 'res-slot unavailable'
+                        else if (occupied) slotClass = 'res-slot occupied'
+                        else if (pastSlot) slotClass = 'res-slot past'
+                        else if (isSelectedSlot) slotClass = 'res-slot selected'
+                        else if (isSuggestedSlot) slotClass = 'res-slot available suggested'
+                        else slotClass = 'res-slot available'
+                      }else{
+                        if (dayIndex === 0) slotClass = 'res-slot unavailable'
+                        else if (occupied) slotClass = 'res-slot occupied'
+                        else if (pastSlot) slotClass = 'res-slot past'
+                        else if (isSelectedSlot) slotClass = 'res-slot selected'
+                        else if (isSuggestedSlot) slotClass = 'res-slot available suggested'
+                        else slotClass = 'res-slot available'
+                      }
 
-                      const titleText = isMidnightSlot ? (allowedMidnight ? (occupied ? 'Ocupado' : 'Disponible (sáb/dom)') : 'No disponible') : (dayIndex === 0 ? 'No disponible' : (occupied ? 'Ocupado' : 'Disponible'))
+                      const titleText = (() => {
+                        if (slotClass.includes('occupied')) return 'Ocupado'
+                        if (slotClass.includes('past')) return 'Horario pasado'
+                        if (slotClass.includes('unavailable')){
+                          return isMidnightSlot ? 'No disponible' : (dayIndex === 0 ? 'No disponible' : 'No disponible')
+                        }
+                        return isMidnightSlot ? 'Disponible (sáb/dom)' : 'Disponible'
+                      })()
 
                       // If the slot is unavailable, render an empty cell (hide the slot)
                       if (slotClass.includes('unavailable')){
@@ -693,7 +769,7 @@ export default function Reservas(){
                             className={slotClass}
                             role={slotClass.includes('available') ? 'button' : 'gridcell'}
                             tabIndex={slotClass.includes('available') ? 0 : -1}
-                            title={titleText + (isSuggestedSlot ? ' — sugerido' : '')}
+                            title={titleText + (isSuggestedSlot ? ' - sugerido' : '')}
                             onClick={slotClass.includes('available') ? (isSuggestedSlot ? ()=>handleSuggestedClick(d,h) : ()=>handleReserve(d,h)) : undefined}
                             onKeyDown={e=>{ if (e.key === 'Enter' && slotClass.includes('available')) { if (isSuggestedSlot){ handleSuggestedClick(d,h) } else handleReserve(d,h) } }}
                           >

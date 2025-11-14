@@ -293,6 +293,7 @@ body{margin:0;font-family:Inter, system-ui, -apple-system, 'Segoe UI', Roboto, '
 .res-slot.available:hover { background: #9fe07a; /* brighter green for hover */ transform: translateY(-2px); }
 .res-slot.occupied { background: #2f8cc9; color: white; }
 .res-slot.unavailable { display:none; }
+.res-slot.past { background:#f4f4f4; border:1px solid #ddd; color:#9a9a9a; cursor:not-allowed; }
 
 /* Suggested block highlight (for multi-turn suggestions) */
 .res-slot.suggested { background: #9fe07a; border: 1px solid #6fbf52; }
