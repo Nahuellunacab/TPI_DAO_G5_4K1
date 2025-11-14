@@ -13,11 +13,11 @@ const CODE_MAP = {
 }
 
 const SPORTS_VISUALS = [
-  { title: 'Futbol', img: '/assets/futbol.jpg', subtitle: 'Canchas de futbol abiertas y techadas con opciones de futbol 5 y 7.' },
+  { title: 'Futbol', img: '/assets/futbol.jpg', subtitle: 'Canchas de futbol abiertas y techadas.' },
   { title: 'Tenis', img: '/assets/tenis.jpeg', subtitle: 'Canchas de tenis abiertas o techadas.' },
   { title: 'Padel', img: '/assets/padel.jpg', subtitle: 'Canchas de padel abiertas o techadas.' },
   { title: 'Hockey', img: '/assets/hockey.jpg', subtitle: 'Cancha de hockey sin techar.' },
-  { title: 'Volley', img: '/assets/voleyCerrado.jpeg', subtitle: 'Cancha de volley techada o al aire libre.' },
+  { title: 'Volley', img: '/assets/voleyCerrado.jpeg', subtitle: 'Cancha de volley techada o tipo playera abierta.' },
   { title: 'Basquet', img: '/assets/basquet.jpeg', subtitle: 'Canchas de basquet al aire libre o techadas.' }
 ]
 
