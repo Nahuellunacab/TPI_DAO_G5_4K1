@@ -4,7 +4,7 @@ import ConfirmModal from './ConfirmModal'
 
 export default function NewCanchaModalNice({ open, onClose, onCreated, editMode = false, initialCancha = null, onUpdated }) {
   const [nombre, setNombre] = useState('')
-  const [descripcion, setDescripcion] = useState('sin techar')
+  const [descripcion, setDescripcion] = useState('')
   const [deporte, setDeporte] = useState('')
   const [precio, setPrecio] = useState('')
   const [estado, setEstado] = useState(1)
@@ -30,7 +30,8 @@ export default function NewCanchaModalNice({ open, onClose, onCreated, editMode 
       .then(r => r.ok ? r.json() : [])
       .then(j => {
         setDeportes(j)
-        if (j && j.length) setDeporte(String(j[0].idDeporte))
+        // Solo establecer deporte por defecto si NO estamos en modo edición
+        if (!editMode && j && j.length) setDeporte(String(j[0].idDeporte))
       })
       .catch(() => {})
     // cargar servicios disponibles
@@ -46,7 +47,23 @@ export default function NewCanchaModalNice({ open, onClose, onCreated, editMode 
         setServiciosSeleccionados(map)
       })
       .catch(() => {})
-  }, [])
+    
+    // Si estamos en modo edición, establecer valores iniciales inmediatamente
+    if (editMode && initialCancha) {
+      setNombre(initialCancha.nombre || '')
+      setDescripcion(initialCancha.descripcion || 'sin techar')
+      setDeporte(String(initialCancha.deporte || ''))
+      setPrecio(initialCancha.precioHora || '')
+      setEstado(initialCancha.estado || 1)
+      if (initialCancha.imagen) { 
+        setSelectedAsset(initialCancha.imagen)
+        setPreviewUrl(initialCancha.imagen) 
+      }
+    } else {
+      // Si es modo creación, establecer descripción por defecto
+      setDescripcion('sin techar')
+    }
+  }, [editMode, initialCancha])
 
   // If editing an existing cancha, load its associated CanchaxServicio rows
   useEffect(() => {
@@ -87,17 +104,16 @@ export default function NewCanchaModalNice({ open, onClose, onCreated, editMode 
     else setPreviewUrl(null)
   }, [file, selectedAsset])
 
-  // prefill fields when opening in edit mode
-  useEffect(() => {
-    if (!editMode || !initialCancha) return
-    setNombre(initialCancha.nombre || '')
-    setDescripcion(initialCancha.descripcion || '')
-    setDeporte(String(initialCancha.deporte || ''))
-    setPrecio(initialCancha.precioHora || '')
-    setEstado(initialCancha.estado || 1)
-    // prefer imagen field if present
-    if (initialCancha.imagen) { setSelectedAsset(initialCancha.imagen); setPreviewUrl(initialCancha.imagen) }
-  }, [editMode, initialCancha])
+  // Este efecto ya no es necesario porque los valores se establecen en el primer useEffect
+  // useEffect(() => {
+  //   if (!editMode || !initialCancha) return
+  //   setNombre(initialCancha.nombre || '')
+  //   setDescripcion(initialCancha.descripcion || '')
+  //   setDeporte(String(initialCancha.deporte || ''))
+  //   setPrecio(initialCancha.precioHora || '')
+  //   setEstado(initialCancha.estado || 1)
+  //   if (initialCancha.imagen) { setSelectedAsset(initialCancha.imagen); setPreviewUrl(initialCancha.imagen) }
+  // }, [editMode, initialCancha])
 
   if (!open) return null
 
