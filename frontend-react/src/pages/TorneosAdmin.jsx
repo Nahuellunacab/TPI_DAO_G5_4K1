@@ -1964,6 +1964,20 @@ export default function TorneosAdmin(){
           </div>
         </div>
       )}
+
+      <footer className="site-footer">
+        <div className="container footer-inner">
+          <div className="brand">
+            <img src="/assets/logo.png" alt="logo" className="logo-small" />
+            <span>GoField</span>
+          </div>
+          <div className="footer-links">
+            <p style={{ margin: 0, color: '#666' }}>
+              Contacto: <a href="mailto:gofield78@gmail.com" style={{ color: 'var(--verde-oscuro)', textDecoration: 'none' }}>gofield78@gmail.com</a>
+            </p>
+          </div>
+        </div>
+      </footer>
     </div>
   )
 }

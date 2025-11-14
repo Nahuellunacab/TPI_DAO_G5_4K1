@@ -178,7 +178,7 @@ export default function Perfil(){
                 </>
               ) : (
                 <>
-                  <Link to="/dashboard" className="nav-link btn-reservas">{topDashboardLabel}</Link>
+                  <Link to="/dashboard" className="nav-link btn-reservas">Reservar</Link>
                   <Link to="/torneos-admin" className="nav-link btn-perfil">Torneos</Link>
                   <Link to="/mis-reservas" className="nav-link btn-calendar">Mis Reservas</Link>
                 </>
@@ -365,6 +365,20 @@ export default function Perfil(){
           </div>
         </div>
       )}
+
+      <footer className="site-footer">
+        <div className="container footer-inner">
+          <div className="brand">
+            <img src="/assets/logo.png" alt="logo" className="logo-small" />
+            <span>GoField</span>
+          </div>
+          <div className="footer-links">
+            <p style={{ margin: 0, color: '#666' }}>
+              Contacto: <a href="mailto:gofield78@gmail.com" style={{ color: 'var(--verde-oscuro)', textDecoration: 'none' }}>gofield78@gmail.com</a>
+            </p>
+          </div>
+        </div>
+      </footer>
     </div>
   )
 }
